@@ -1,0 +1,24 @@
+<div class="outer">
+    <form [formGroup]="form">
+        <p>Длительность хода:</p>
+        <mat-radio-group formControlName="roundDuration" aria-label="Длительность хода:">
+            <mat-radio-button *ngFor="let round of roundDurationValues" [value]="round">{{ round }}секунды
+            </mat-radio-button>
+        </mat-radio-group>
+    </form>
+</div>
+
+<div class="outer">
+    <button mat-button (click)="updateRoundDuration()">updateRoundDuration</button>
+    <button mat-button (click)="updateUserCharacter1()">userCharacter to NERZHUL</button>
+    <button mat-button (click)="updateUserCharacter2()">userCharacter to GULDAN</button>
+</div>
+
+fullState:
+<pre>{{ fullState$ | async | json  }}</pre>
+
+state:
+<pre>
+    roundDuration$ - {{ roundDuration$ | async }}
+    userCharacter$ - {{ userCharacter$ | async }}
+</pre>
