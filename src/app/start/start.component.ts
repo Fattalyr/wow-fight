@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { select, Store } from '@ngrx/store';
+import { Router } from '@angular/router';
 import { selectRoundDuration, selectUserCharacter, selectSettings } from '../store/settings/settings.selectors';
 import { updateRoundDuration, updateUserCharacter } from '../store/settings/settings.actions';
 import { NAMES } from '../constants/constants';
@@ -12,10 +13,12 @@ import { NAMES } from '../constants/constants';
 })
 export class StartComponent implements OnInit {
 
+  public names = NAMES;
+
   public roundDurationValues = [ 3, 5, 10 ];
 
   public form: FormGroup = new FormGroup({
-    roundDuration: new FormControl(3, []),
+      roundDuration: new FormControl(),
   });
 
   public roundDuration$ = this.store.pipe(
@@ -32,24 +35,21 @@ export class StartComponent implements OnInit {
 
   constructor(
       private store: Store,
+      private router: Router,
   ) { }
 
   ngOnInit(): void {
-    this.form.controls.roundDuration.valueChanges.subscribe(roundDuration =>
-      this.store.dispatch(updateRoundDuration({ roundDuration }))
-    );
+      this.form.controls.roundDuration.valueChanges.subscribe(roundDuration =>
+          this.store.dispatch(updateRoundDuration({ roundDuration }))
+      );
   }
 
-  public updateRoundDuration(): void {
-    this.store.dispatch(updateRoundDuration({ roundDuration: 666 }));
+  public updateUserCharacter(name: NAMES): void {
+      this.store.dispatch(updateUserCharacter({ userCharacter: name }));
   }
 
-  public updateUserCharacter1(): void {
-    this.store.dispatch(updateUserCharacter({ userCharacter: NAMES.NERZHUL }));
-  }
-
-  public updateUserCharacter2(): void {
-    this.store.dispatch(updateUserCharacter({ userCharacter: NAMES.GULDAN }));
+  public navigateToBattle(): void {
+      this.router.navigate([ 'battle' ]);
   }
 
 }

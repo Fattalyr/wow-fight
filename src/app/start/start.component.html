@@ -1,19 +1,58 @@
-<div class="outer">
+<div class="outer outer-padding">
     <form [formGroup]="form">
-        <p>Длительность хода:</p>
-        <mat-radio-group formControlName="roundDuration" aria-label="Длительность хода:">
-            <mat-radio-button *ngFor="let round of roundDurationValues" [value]="round">{{ round }}секунды
-            </mat-radio-button>
-        </mat-radio-group>
+
+        <p class="centered">Выберите героя:</p>
+        <div class="heroes-box">
+            <div class="heroes-box-inner">
+                <div
+                    class="hero-image nerzhul"
+                    [class]="{ selected: (userCharacter$ | async) === names.NERZHUL }"
+                    (click)="updateUserCharacter(names.NERZHUL)"
+                >
+                    <div class="hero-name">{{ names.NERZHUL }}</div>
+                </div>
+                <div
+                    class="hero-image guldan"
+                    [class]="{ selected: (userCharacter$ | async) === names.GULDAN }"
+                    (click)="updateUserCharacter(names.GULDAN)"
+                >
+                    <div class="hero-name">{{ names.GULDAN }}</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="centered">
+            Длительность хода:
+            <mat-radio-group formControlName="roundDuration" aria-label="Длительность хода:">
+                <mat-radio-button
+                    *ngFor="let round of roundDurationValues"
+                    [checked]="(roundDuration$ | async) === round"
+                    [value]="round"
+                >
+                    {{ round }}
+                    {{
+                        [ 2, 3, 4 ].includes(round)
+                            ? 'секунды'
+                            : (round > 4 ? 'секунд' : 'секунда')
+                    }}
+                </mat-radio-button>
+            </mat-radio-group>
+        </p>
+
+        <p class="centered">
+            <button
+                mat-raised-button
+                color="accent"
+                (click)="navigateToBattle()"
+            >
+                В бой!
+            </button>
+        </p>
+
     </form>
 </div>
 
-<div class="outer">
-    <button mat-button (click)="updateRoundDuration()">updateRoundDuration</button>
-    <button mat-button (click)="updateUserCharacter1()">userCharacter to NERZHUL</button>
-    <button mat-button (click)="updateUserCharacter2()">userCharacter to GULDAN</button>
-</div>
-
+<!--
 fullState:
 <pre>{{ fullState$ | async | json  }}</pre>
 
@@ -22,3 +61,4 @@ state:
     roundDuration$ - {{ roundDuration$ | async }}
     userCharacter$ - {{ userCharacter$ | async }}
 </pre>
+-->

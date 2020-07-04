@@ -1,5 +1,8 @@
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
 
+$line-height-md: 22px;
+$font-size-md: 16px;
+
 * {
   -webkit-box-sizing: border-box;
   box-sizing: border-box;
@@ -13,9 +16,15 @@ html, body {
 }
 
 body {
-  font-size: 18px;
+  font-size: $font-size-md;
   font-family: -apple-system, BlinkMacSystemFont, Roboto, Calibri, sans-serif;
   color: #000;
+}
+
+p {
+  font-size: $font-size-md;
+  line-height: $line-height-md;
+  margin: 0 0 $line-height-md 0;
 }
 
 a:link { color: #182340; }
