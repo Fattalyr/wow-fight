@@ -1,1 +1,33 @@
-<p>battle works!</p>
+<div class="outer outer-padding">
+    <form [formGroup]="form">
+
+        <p class="centered">Раунд:</p>
+        <div class="heroes-box">
+            <div class="heroes-box-inner">
+                <div
+                    class="hero-image nerzhul"
+                    [class]="{ active: true }"
+                >
+                    <div class="hero-name">{{ names.NERZHUL }}</div>
+                </div>
+                <div
+                    class="hero-image guldan"
+                    [class]="{ active: true }"
+                >
+                    <div class="hero-name">{{ names.GULDAN }}</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="centered">
+            <button
+                mat-raised-button
+                color="accent"
+                (click)="turnRound()"
+            >
+                Сделать ход
+            </button>
+        </p>
+
+    </form>
+</div>
