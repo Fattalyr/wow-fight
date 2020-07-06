@@ -12,12 +12,14 @@ import { StoreModule } from '@ngrx/store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { environment } from '../environments/environment';
 import { BattleComponent } from './battle/battle.component';
+import { RoundPipe } from './pipes/round.pipe';
 
 @NgModule({
   declarations: [
     AppComponent,
     StartComponent,
     BattleComponent,
+    RoundPipe,
   ],
   imports: [
     BrowserModule,

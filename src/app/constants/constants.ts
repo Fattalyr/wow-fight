@@ -102,7 +102,7 @@ export const CHARACTERS_START_DATA = {
     },
 };
 
-export const multipliers = {
+export const MULTIPLIERS = {
     strength: {
         dps: 1.5,
         hp: 2,

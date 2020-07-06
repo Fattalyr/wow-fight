@@ -56,3 +56,4 @@ const {
 } = adapter.getSelectors();
 
 export const selectAllTurns = selectAll;
+export const selectAllTurnsNumber = selectTotal;

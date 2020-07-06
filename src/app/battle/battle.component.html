@@ -1,20 +1,34 @@
 <div class="outer outer-padding">
     <form [formGroup]="form">
 
-        <p class="centered">Раунд:</p>
+        <p class="centered">Раунд {{ (total$ | async) + 1 }}</p>
         <div class="heroes-box">
             <div class="heroes-box-inner">
                 <div
                     class="hero-image nerzhul"
-                    [class]="{ active: true }"
                 >
+                    <div class="hp-indicator">
+                        <div class="hp-current"></div>
+                    </div>
                     <div class="hero-name">{{ names.NERZHUL }}</div>
                 </div>
                 <div
                     class="hero-image guldan"
-                    [class]="{ active: true }"
                 >
+                    <div class="hp-indicator">
+                        <div class="hp-current"></div>
+                    </div>
                     <div class="hero-name">{{ names.GULDAN }}</div>
+                </div>
+                <div class="hero-data nerzhul">
+                    <div class="parameter hp">HP: {{ calculatedProps[names.NERZHUL].hp | round:2 }}</div>
+                    <div class="parameter dps">DPS:  {{ calculatedProps[names.NERZHUL].dps | round:2 }}</div>
+                    <div class="parameter crit">Crit:  {{ calculatedProps[names.NERZHUL].crit * 100 | round:2 }}%</div>
+                </div>
+                <div class="hero-data guldan">
+                    <div class="parameter hp">HP: {{ calculatedProps[names.GULDAN].hp | round:2 }}</div>
+                    <div class="parameter dps">DPS:  {{ calculatedProps[names.GULDAN].dps | round:2 }}</div>
+                    <div class="parameter crit">Crit:  {{ calculatedProps[names.GULDAN].crit * 100 | round:2 }}% </div>
                 </div>
             </div>
         </div>
