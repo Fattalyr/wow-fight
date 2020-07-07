@@ -7,6 +7,7 @@ import { deleteBattle, turnCompleted } from './battle.actions';
 export const battleFeatureKey = 'battle';
 
 export interface ITurnActivity {
+    target: NAMES | BEASTS | null;
     meleeDamage?: boolean;
     craftedSpells?: SPELLS[];
     spellContinues?: number[];

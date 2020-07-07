@@ -1,12 +1,14 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { select, Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
-import { Router } from '@angular/router';
-import { selectRoundDuration, selectSettings, selectUserCharacter } from '../store/settings/settings.selectors';
+import { map, tap, switchMap, takeUntil, } from 'rxjs/operators';
+import { selectCPUCharacter, selectPlayerCharacter, selectSettings } from '../store/settings/settings.selectors';
 import { selectTotalTurns, selectTurns } from '../store/battle/battle.selectors';
-import { CHARACTERS_START_DATA, MULTIPLIERS, NAMES } from '../constants/constants';
-import { map, tap, takeUntil, } from 'rxjs/operators';
+import { BEASTS, BEASTS_DATA, CHARACTERS_START_DATA, IAvailableSpells, IPossibilities, MULTIPLIERS, NAMES, } from '../constants/constants';
+import { ITurn } from '../store/battle/battle.reducer';
+import { CharacterClass } from '../classes/character.class';
+import { BeastClass } from '../classes/beast.class';
 
 @Component({
     selector: 'app-battle',
@@ -51,12 +53,12 @@ export class BattleComponent implements OnInit, OnDestroy {
         roundDuration: new FormControl(),
     });
 
-    public roundDuration$ = this.store.pipe(
-        select(selectRoundDuration)
+    public playerCharacter$ = this.store.pipe(
+        select(selectPlayerCharacter)
     );
 
-    public userCharacter$ = this.store.pipe(
-        select(selectUserCharacter)
+    public cpuCharacter$ = this.store.pipe(
+        select(selectCPUCharacter)
     );
 
     public fullState$ = this.store.pipe(
@@ -70,6 +72,14 @@ export class BattleComponent implements OnInit, OnDestroy {
     public total$ = this.store.pipe(
         select(selectTotalTurns)
     );
+
+    public defaultPossibilities: IPossibilities;
+
+    public currentPossibilities: IPossibilities;
+
+    public currentTurn: ITurn;
+
+    public enemies: Array<NAMES | BEASTS> = [];
 
     private destroy$ = new Subject<void>();
 
@@ -103,10 +113,67 @@ export class BattleComponent implements OnInit, OnDestroy {
                 takeUntil(this.destroy$),
             )
             .subscribe();
+
+        // this.playerCharacter$
+        //     .pipe(
+        //         tap((playerCharacter: NAMES) => this.defaultPossibilities = this.setDefaultPossibilities(playerCharacter)),
+        //         switchMap(playerCharacter => this.cpuCharacter$
+        //             .pipe(
+        //                 map((cpuCharacter: NAMES) => [ playerCharacter, cpuCharacter ]),
+        //             )
+        //         ),
+        //         switchMap(([ playerCharacter, cpuCharacter ]) => this.turns$
+        //             .pipe(
+        //                 tap((turns: ITurn[]) => this.currentTurn = this.calculateCurrentTurn(turns, playerCharacter, cpuCharacter)),
+        //             ),
+        //         ),
+        //         takeUntil(this.destroy$),
+        //     )
+        //     .subscribe();
     }
 
     private initCurrentProps(): void {
         this.currentProps = { ...this.calculatedProps };
+    }
+
+    private setDefaultPossibilities(userCharacter: NAMES): IPossibilities {
+        const spellsNames = Object.keys(this.characterData[userCharacter].spells);
+        const availableSpells: IAvailableSpells = {};
+
+        for (const spell of spellsNames) {
+            availableSpells[spell] = true;
+        }
+
+        return {
+            canHit: true,
+            spells: availableSpells,
+        };
+    }
+
+    private calculateCurrentTurn(turns: ITurn[], playerCharacter: NAMES, cpuCharacter: NAMES): ITurn {
+        const len = turns.length;
+        if (len === 0) {
+            return {
+                userTurnAvailable: true,
+                roundNumber: 1,
+                playersActivities: { critFired: false, target: null, },
+                cpusActivities: { critFired: false, target: null, },
+                playerCharacter,
+                cpuCharacter,
+            };
+        }
+
+        const lastTurn = turns[len - 1];
+        const currentTurn = {
+            userTurnAvailable: true,
+            roundNumber: len + 1,
+            playersActivities: { critFired: false, target: null, },
+            cpusActivities: { critFired: false, target: null, },
+            playerCharacter,
+            cpuCharacter,
+        };
+
+
     }
 
     public turnRound(): void {

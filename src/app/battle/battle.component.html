@@ -10,7 +10,10 @@
                     <div class="hp-indicator">
                         <div class="hp-current"></div>
                     </div>
-                    <div class="hero-name">{{ names.NERZHUL }}</div>
+                    <div class="hero-name">
+                        {{ (userCharacter$ | async) === names.NERZHUL ? '(вы)' : '(CPU)' }}
+                        {{ names.NERZHUL }}
+                    </div>
                 </div>
                 <div
                     class="hero-image guldan"
@@ -18,7 +21,10 @@
                     <div class="hp-indicator">
                         <div class="hp-current"></div>
                     </div>
-                    <div class="hero-name">{{ names.GULDAN }}</div>
+                    <div class="hero-name">
+                        {{ (userCharacter$ | async) === names.GULDAN ? '(вы)' : '(CPU)' }}
+                        {{ names.GULDAN }}
+                    </div>
                 </div>
                 <div class="hero-data nerzhul">
                     <div class="parameter hp">HP: {{ calculatedProps[names.NERZHUL].hp | round:2 }}</div>

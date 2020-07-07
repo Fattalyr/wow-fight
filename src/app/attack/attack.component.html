@@ -1,0 +1,19 @@
+<div class="attack-outer">
+    <p class="centered">
+        Длительность хода:
+        <mat-radio-group formControlName="roundDuration" aria-label="Длительность хода:">
+            <mat-radio-button
+                *ngFor="let round of roundDurationValues"
+                [checked]="(roundDuration$ | async) === round"
+                [value]="round"
+            >
+                {{ round }}
+                {{
+                [ 2, 3, 4 ].includes(round)
+                    ? 'секунды'
+                    : (round > 4 ? 'секунд' : 'секунда')
+                }}
+            </mat-radio-button>
+        </mat-radio-group>
+    </p>
+</div>

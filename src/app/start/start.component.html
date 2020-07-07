@@ -6,38 +6,20 @@
             <div class="heroes-box-inner">
                 <div
                     class="hero-image nerzhul"
-                    [class]="{ selected: (userCharacter$ | async) === names.NERZHUL }"
-                    (click)="updateUserCharacter(names.NERZHUL)"
+                    [class]="{ selected: (playerCharacter$ | async).self === names.NERZHUL }"
+                    (click)="updatePlayerCharacter(names.NERZHUL)"
                 >
                     <div class="hero-name">{{ names.NERZHUL }}</div>
                 </div>
                 <div
                     class="hero-image guldan"
-                    [class]="{ selected: (userCharacter$ | async) === names.GULDAN }"
-                    (click)="updateUserCharacter(names.GULDAN)"
+                    [class]="{ selected: (playerCharacter$ | async).self === names.GULDAN }"
+                    (click)="updatePlayerCharacter(names.GULDAN)"
                 >
                     <div class="hero-name">{{ names.GULDAN }}</div>
                 </div>
             </div>
         </div>
-
-        <p class="centered">
-            Длительность хода:
-            <mat-radio-group formControlName="roundDuration" aria-label="Длительность хода:">
-                <mat-radio-button
-                    *ngFor="let round of roundDurationValues"
-                    [checked]="(roundDuration$ | async) === round"
-                    [value]="round"
-                >
-                    {{ round }}
-                    {{
-                        [ 2, 3, 4 ].includes(round)
-                            ? 'секунды'
-                            : (round > 4 ? 'секунд' : 'секунда')
-                    }}
-                </mat-radio-button>
-            </mat-radio-group>
-        </p>
 
         <p class="centered">
             <button
@@ -51,14 +33,3 @@
 
     </form>
 </div>
-
-<!--
-fullState:
-<pre>{{ fullState$ | async | json  }}</pre>
-
-state:
-<pre>
-    roundDuration$ - {{ roundDuration$ | async }}
-    userCharacter$ - {{ userCharacter$ | async }}
-</pre>
--->

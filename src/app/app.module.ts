@@ -12,6 +12,7 @@ import { StoreModule } from '@ngrx/store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { environment } from '../environments/environment';
 import { BattleComponent } from './battle/battle.component';
+import { AttackComponent } from './attack/attack.component';
 import { RoundPipe } from './pipes/round.pipe';
 
 @NgModule({
@@ -19,6 +20,7 @@ import { RoundPipe } from './pipes/round.pipe';
     AppComponent,
     StartComponent,
     BattleComponent,
+    AttackComponent,
     RoundPipe,
   ],
   imports: [

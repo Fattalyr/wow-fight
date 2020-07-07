@@ -1,37 +1,55 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { select, Store } from '@ngrx/store';
 import { Router } from '@angular/router';
-import { selectRoundDuration, selectUserCharacter, selectSettings } from '../store/settings/settings.selectors';
-import { updateRoundDuration, updateUserCharacter } from '../store/settings/settings.actions';
+import {
+    selectSettings,
+    selectPlayerCharacter,
+    selectCPUCharacter,
+    selectPlayerPartyId,
+    selectCPUPartyId,
+} from '../store/settings/settings.selectors';
+import { toggleCharacters } from '../store/settings/settings.actions';
 import { NAMES } from '../constants/constants';
+import { takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 
 @Component({
     selector: 'app-start',
     templateUrl: './start.component.html',
     styleUrls: ['./start.component.scss']
 })
-export class StartComponent implements OnInit {
+export class StartComponent implements OnInit, OnDestroy {
 
     public names = NAMES;
-
-    public roundDurationValues = [ 3, 5, 10 ];
 
     public form: FormGroup = new FormGroup({
         roundDuration: new FormControl(),
     });
 
-    public roundDuration$ = this.store.pipe(
-        select(selectRoundDuration)
+    public playerCharacter$ = this.store.pipe(
+        select(selectPlayerCharacter)
     );
 
-    public userCharacter$ = this.store.pipe(
-        select(selectUserCharacter)
+    public cpuCharacter$ = this.store.pipe(
+        select(selectCPUCharacter)
+    );
+
+    public playerPartyId$ = this.store.pipe(
+        select(selectPlayerPartyId)
+    );
+
+    public cpuPartyId$ = this.store.pipe(
+        select(selectCPUPartyId)
     );
 
     public fullState$ = this.store.pipe(
         select(selectSettings)
     );
+
+    public playerCharacterName: NAMES;
+
+    private destroy$ = new Subject<void>();
 
     constructor(
         private store: Store,
@@ -39,13 +57,22 @@ export class StartComponent implements OnInit {
     ) { }
 
     ngOnInit(): void {
-        this.form.controls.roundDuration.valueChanges.subscribe(roundDuration =>
-            this.store.dispatch(updateRoundDuration({ roundDuration }))
-        );
+        this.playerCharacter$
+            .pipe(
+                takeUntil(this.destroy$),
+            )
+            .subscribe();
     }
 
-    public updateUserCharacter(name: NAMES): void {
-        this.store.dispatch(updateUserCharacter({ userCharacter: name }));
+    ngOnDestroy(): void {
+        this.destroy$.next();
+    }
+
+    public updatePlayerCharacter(name: NAMES): void {
+        if (name !== this.playerCharacterName) {
+            this.store.dispatch(toggleCharacters());
+        }
+        this.playerCharacterName = name;
     }
 
     public navigateToBattle(): void {

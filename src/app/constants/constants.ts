@@ -7,6 +7,17 @@ export enum BEASTS {
     SKELETON = 'скелет',
 }
 
+/**
+ * @description Чтобы подставлять в конструктор класса Beast.
+ */
+export const BEASTS_DATA = {
+    [ BEASTS.SKELETON ]: {
+        self: BEASTS.SKELETON,
+        dps: 100,
+        hp: 300,
+    }
+};
+
 export enum SPELLS {
     FEAR = 'страх',
     FILTH = 'скверна',
@@ -14,7 +25,7 @@ export enum SPELLS {
     REBIRTH = 'возрождение',
 }
 
-export interface ISpellParams {
+export interface ISpell {
     spellName: SPELLS;
     duration: number;
     target: 'self' | 'enemy';
@@ -28,7 +39,7 @@ export interface ISpellParams {
     calledBeastParams?: ICalledBeastsParams;
 }
 
-export const SPELL_FEAR: ISpellParams = {
+export const SPELL_FEAR: ISpell = {
     spellName: SPELLS.FEAR,
     duration: 3,
     target: 'enemy',
@@ -39,7 +50,7 @@ export const SPELL_FEAR: ISpellParams = {
     coolDown: 60,
 };
 
-export const SPELL_FILTH: ISpellParams = {
+export const SPELL_FILTH: ISpell = {
     spellName: SPELLS.FILTH,
     duration: 1,
     target: 'enemy',
@@ -51,7 +62,7 @@ export const SPELL_FILTH: ISpellParams = {
     coolDown: 10,
 };
 
-export const SPELL_ANCESTRAL_SPIRIT: ISpellParams = {
+export const SPELL_ANCESTRAL_SPIRIT: ISpell = {
     spellName: SPELLS.ANCESTRAL_SPIRIT,
     duration: 1,
     target: 'self',
@@ -63,7 +74,7 @@ export const SPELL_ANCESTRAL_SPIRIT: ISpellParams = {
     coolDown: 10,
 };
 
-export const SPELL_REBIRTH: ISpellParams = {
+export const SPELL_REBIRTH: ISpell = {
     spellName: SPELLS.REBIRTH,
     duration: 1,
     target: 'self',
@@ -81,6 +92,7 @@ export const SPELL_REBIRTH: ISpellParams = {
 
 export const CHARACTERS_START_DATA = {
     [NAMES.GULDAN]: {
+        self: NAMES.GULDAN,
         strength: 30,
         agility: 20,
         intellect: 150,
@@ -91,6 +103,7 @@ export const CHARACTERS_START_DATA = {
         ],
     },
     [NAMES.NERZHUL]: {
+        self: NAMES.NERZHUL,
         strength: 40,
         agility: 50,
         intellect: 120,
@@ -128,4 +141,35 @@ export const MULTIPLIERS = {
 export interface ICalledBeastsParams {
     damage: number;
     hp: number;
+}
+
+export interface ICalculatedParams {
+    dps: number;
+    hp: number;
+    crit: number;
+}
+
+export interface IAvailableSpells {
+    [n: string]: boolean;
+}
+
+export interface IPossibilities {
+    canHit: boolean;
+    spells: IAvailableSpells | undefined[];
+    availableEnemies?: BEASTS[];
+}
+
+export interface IBeastsData {
+    self: BEASTS;
+    dps: number;
+    hp: number;
+}
+
+export interface ICharacterData {
+    self: NAMES;
+    strength: number;
+    agility: number;
+    intellect: number;
+    stamina: number;
+    spells: ISpell[];
 }
