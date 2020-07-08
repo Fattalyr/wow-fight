@@ -2,6 +2,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { select, Store } from '@ngrx/store';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import {
     selectSettings,
     selectPlayerCharacter,
@@ -10,9 +12,8 @@ import {
     selectCPUPartyId,
 } from '../store/settings/settings.selectors';
 import { toggleCharacters } from '../store/settings/settings.actions';
-import { NAMES } from '../constants/constants';
-import { takeUntil } from 'rxjs/operators';
-import { Subject } from 'rxjs';
+import { NAMES } from '../models';
+
 
 @Component({
     selector: 'app-start',

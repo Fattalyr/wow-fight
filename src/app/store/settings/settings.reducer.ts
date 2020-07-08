@@ -1,9 +1,10 @@
 import { createReducer, on, Action } from '@ngrx/store';
 import { UUID } from 'angular2-uuid';
-import { CHARACTERS_START_DATA, NAMES } from '../../constants/constants';
 import * as SettingsActions from './settings.actions';
 import { CharacterClass } from '../../classes/character.class';
 import { BeastClass } from '../../classes/beast.class';
+import { NAMES } from '../../models';
+import { CHARACTERS_START_DATA } from '../../constants/constants';
 
 
 const playerPartyId = UUID.UUID();
@@ -27,9 +28,9 @@ const cpuCharacterName = randomNumber >= 0.5 ? NAMES.NERZHUL : NAMES.GULDAN;
 const initialState: ISettingsState = {
     playerPartyId,
     cpuPartyId,
-    playerCharacter: new CharacterClass(CHARACTERS_START_DATA[ playerCharacterName ], playerPartyId),
+    playerCharacter: new CharacterClass(CHARACTERS_START_DATA[ playerCharacterName ], playerPartyId, randomNumber < 0.5 ? 'nerzhul' : 'guldan'),
     playerBeasts: [],
-    cpuCharacter: new CharacterClass(CHARACTERS_START_DATA[ cpuCharacterName ], cpuPartyId),
+    cpuCharacter: new CharacterClass(CHARACTERS_START_DATA[ cpuCharacterName ], cpuPartyId, randomNumber >= 0.5 ? 'nerzhul' : 'guldan'),
     cpuBeasts: [],
 };
 
@@ -69,8 +70,16 @@ const settingsReducer = createReducer(
         return newState;
     }),
     on(SettingsActions.toggleCharacters, (state: ISettingsState) => {
-        const newPlayerCharacter = new CharacterClass(CHARACTERS_START_DATA[ state.cpuCharacter.self ], playerPartyId);
-        const newCPUCharacter = new CharacterClass(CHARACTERS_START_DATA[ state.playerCharacter.self ], cpuPartyId);
+        const newPlayerCharacter = new CharacterClass(
+            CHARACTERS_START_DATA[ state.cpuCharacter.self ],
+            playerPartyId,
+            state.playerCharacter.slug === 'nerzhul' ? 'guldan' : 'nerzhul'
+        );
+        const newCPUCharacter = new CharacterClass(
+            CHARACTERS_START_DATA[ state.playerCharacter.self ],
+            cpuPartyId,
+            state.cpuCharacter.slug === 'nerzhul' ? 'guldan' : 'nerzhul'
+        );
         return { ...state, playerCharacter: newPlayerCharacter, cpuCharacter: newCPUCharacter };
     })
 );

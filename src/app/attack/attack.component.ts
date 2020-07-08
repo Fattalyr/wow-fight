@@ -1,5 +1,5 @@
 import { Component, Input, OnInit } from '@angular/core';
-import { IPossibilities } from '../constants/constants';
+import { IAvailableAttackVectors } from '../constants/constants';
 
 @Component({
     selector: 'app-attack',
@@ -8,7 +8,7 @@ import { IPossibilities } from '../constants/constants';
 })
 export class AttackComponent implements OnInit {
     @Input()
-    attackVectors: IPossibilities;
+    attackVectors: IAvailableAttackVectors;
 
     @Input()
     enemies = 1;

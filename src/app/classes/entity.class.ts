@@ -1,4 +1,4 @@
-import { BEASTS, IBeastsData, ICharacterData, NAMES } from '../constants/constants';
+import { NAMES, BEASTS, IBeastsData, CraftedSpells, ICharacterData } from '../models';
 
 
 export class EntityClass {
@@ -7,6 +7,9 @@ export class EntityClass {
     public party: string;
     public inheritedData: IBeastsData | ICharacterData;
     public currentData: IBeastsData | ICharacterData;
+    public slug: string;
+    public spellbound: CraftedSpells;
+    public castedSpells: CraftedSpells;
 
     // tslint:disable-next-line:variable-name
     private _isAlive: boolean;

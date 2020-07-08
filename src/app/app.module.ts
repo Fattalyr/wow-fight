@@ -12,6 +12,7 @@ import { StoreModule } from '@ngrx/store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { environment } from '../environments/environment';
 import { BattleComponent } from './battle/battle.component';
+import { CharacterCardComponent } from './battle/character-card/character-card.component';
 import { AttackComponent } from './attack/attack.component';
 import { RoundPipe } from './pipes/round.pipe';
 
@@ -20,6 +21,7 @@ import { RoundPipe } from './pipes/round.pipe';
     AppComponent,
     StartComponent,
     BattleComponent,
+    CharacterCardComponent,
     AttackComponent,
     RoundPipe,
   ],

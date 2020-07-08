@@ -14,38 +14,6 @@
   }
 }
 
-.hero-image {
-  position: relative;
-  max-width: 400px;
-  width: 50%;
-  height: 500px;
-  background-size: cover;
-  transition: filter .5s, border .5s;
-  cursor: pointer;
-  padding: 1px;
-  border: transparent 3px solid;
-
-  .hero-name {
-    position: absolute;
-    width: 100%;
-    bottom: 0;
-    height: 36px;
-    line-height: 36px;
-    font-size: 22px;
-    color: #fff;
-    font-weight: bold;
-    text-align: center;
-  }
-
-  &.nerzhul {
-    background: url(../../assets/images/ner-zhul.png) no-repeat 50% 50%;
-  }
-
-  &.guldan {
-    background: url(../../assets/images/gul-dan.jpg) no-repeat 50% 50%;
-  }
-}
-
 .hero-data {
   position: relative;
   max-width: 400px;
@@ -82,36 +50,10 @@
   }
 }
 
-.mat-radio-group {
-  .mat-radio-button {
-    margin-left: 16px;
-  }
-}
-
 .outer-padding {
   padding: 20px 0;
 }
 
 .centered {
   text-align: center;
-}
-
-.hp-indicator {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 20px;
-  background: darkred;
-  color: #fff;
-
-  .hp-current {
-    position: absolute;
-    height: 100%;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    background-color: forestgreen;
-    border-top: 1px solid #fff;
-  }
 }

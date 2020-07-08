@@ -1,23 +1,26 @@
-import { EntityClass } from './entity.class';
-import { ICalculatedParams, ICharacterData, MULTIPLIERS } from '../constants/constants';
 import { UUID } from 'angular2-uuid';
+import { EntityClass } from './entity.class';
+import { ICalculatedParams, ICharacterData } from '../models';
+import { MULTIPLIERS } from '../constants/constants';
 
 
 export class CharacterClass extends EntityClass {
     private multipliers = MULTIPLIERS;
     public inheritedData: ICharacterData;
     public currentData: ICharacterData;
-    public calculatedData: ICalculatedParams;
 
-    constructor(characterData: ICharacterData, party: string) {
+    constructor(characterData: ICharacterData, party: string, slug: string) {
         super();
+        const calculatedParams = this.calculateBasicParams(characterData);
         this.self = characterData.self;
-        this.inheritedData = { ...characterData };
-        this.currentData = { ...characterData };
-        this.calculatedData = this.calculateBasicParams(this.currentData);
+        this.inheritedData = { ...characterData, ...calculatedParams };
+        this.currentData = { ...characterData, ...calculatedParams };
         this.isAlive = true;
         this.party = party;
         this.id = UUID.UUID();
+        this.slug = slug;
+        this.spellbound = [];
+        this.castedSpells = [];
     }
 
     public calculateBasicParams(characterData: ICharacterData): ICalculatedParams {
@@ -35,6 +38,6 @@ export class CharacterClass extends EntityClass {
     }
 
     public updateCalculatedDataByCurrentData(): void {
-        this.calculatedData = this.calculateBasicParams(this.currentData);
+        this.currentData = { ...this.currentData, ...this.calculateBasicParams(this.currentData) };
     }
 }
