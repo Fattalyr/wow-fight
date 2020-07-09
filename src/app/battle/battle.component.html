@@ -45,6 +45,7 @@
                 mat-raised-button
                 color="accent"
                 (click)="turnRound()"
+                [disabled]="!form.controls.playerAttacksControl.dirty"
             >
                 Сделать ход
             </button>

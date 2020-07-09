@@ -13,15 +13,12 @@ import {
 } from '../store/settings/settings.selectors';
 import { selectTotalTurns, selectTurns } from '../store/battle/battle.selectors';
 import { turnCompleted } from '../store/battle/battle.actions';
-import { NAMES, BEASTS, IAvailableAttackVectors, CraftedSpells, SPELLS, ISpell, } from '../models';
-import {
-    CHARACTERS_START_DATA,
-    BEASTS_DATA,
-    MULTIPLIERS,
-} from '../constants/constants';
-import { ITurn } from '../store/battle/battle.reducer';
+import { NAMES, BEASTS, IAvailableAttackVectors, CraftedSpells, SPELLS, ISpell, IPossibleAttack, } from '../models';
+import { ITurn, ITurnActivity } from '../store/battle/battle.reducer';
 import { CharacterClass } from '../classes/character.class';
 import { BeastClass } from '../classes/beast.class';
+import { AttackService } from '../services/attack.service';
+import { addBeast } from '../store/settings/settings.actions';
 
 
 @Component({
@@ -32,36 +29,6 @@ import { BeastClass } from '../classes/beast.class';
 export class BattleComponent implements OnInit, OnDestroy {
 
     public names = NAMES;
-
-    public characterData = CHARACTERS_START_DATA;
-
-    private multipliers = MULTIPLIERS;
-
-    public calculatedProps = {
-        [NAMES.GULDAN]: {
-            hp: 0,
-            dps: 0,
-            crit: 0,
-        },
-        [NAMES.NERZHUL]: {
-            hp: 0,
-            dps: 0,
-            crit: 0,
-        },
-    };
-
-    public currentProps = {
-        [NAMES.GULDAN]: {
-            hp: 0,
-            dps: 0,
-            crit: 0,
-        },
-        [NAMES.NERZHUL]: {
-            hp: 0,
-            dps: 0,
-            crit: 0,
-        },
-    };
 
     public playerCharacter$ = this.store.pipe(
         select(selectPlayerCharacter)
@@ -101,8 +68,6 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     public currentTurn: ITurn;
 
-    public enemies: string[] = [];
-
     public turnNumber: number;
 
     private destroy$ = new Subject<void>();
@@ -117,12 +82,21 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     public cpusAvailableAttackVectors: IAvailableAttackVectors;
 
+    public playerAttacks: IPossibleAttack;
+
+    public cpuAttacks: IPossibleAttack;
+
     public form: FormGroup = new FormGroup({
         playerAttacksControl: new FormControl(),
     });
 
+    private playerCharacter: CharacterClass;
+
+    private cpuCharacter: CharacterClass;
+
     constructor(
         private store: Store,
+        private attackService: AttackService,
     ) { }
 
     ngOnInit(): void {
@@ -130,9 +104,6 @@ export class BattleComponent implements OnInit, OnDestroy {
             .pipe(
                 map((total: number) => {
                     this.turnNumber = total + 1;
-                    if (total === 0) {
-                        this.initCurrentProps();
-                    }
                     return total;
                 }),
                 takeUntil(this.destroy$),
@@ -157,10 +128,16 @@ export class BattleComponent implements OnInit, OnDestroy {
                     playerCharacter,
                     cpuCharacter,
                 })),
+                tap(({ playerParty, cpuParty, playerCharacter, cpuCharacter }) => {
+                    this.allEntities = [ ...playerParty, ...cpuParty ];
+                    this.playerPartyEntities = playerParty;
+                    this.cpuPartyEntities = cpuParty;
+                    this.playerCharacter = playerCharacter;
+                    this.cpuCharacter = cpuCharacter;
+                }),
                 switchMap(({ playerParty, cpuParty, playerCharacter, cpuCharacter }) => this.turns$
                     .pipe(
                         tap(turns => {
-                            this.allEntities = [ ...playerParty, ...cpuParty ];
                             this.playersAvailableAttackVectors = this.calculateAttackVectors(turns, playerCharacter, cpuParty);
                             this.cpusAvailableAttackVectors = this.calculateAttackVectors(turns, cpuCharacter, playerParty);
                         }),
@@ -174,7 +151,7 @@ export class BattleComponent implements OnInit, OnDestroy {
             .get('playerAttacksControl')
             .valueChanges
             .pipe(
-                tap(value => console.log('attack', value)),
+                tap(({ value }) => this.playerAttacks = value),
                 takeUntil(this.destroy$),
             )
             .subscribe();
@@ -182,10 +159,6 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     ngOnDestroy(): void {
         this.destroy$.next();
-    }
-
-    private initCurrentProps(): void {
-        this.currentProps = { ...this.calculatedProps };
     }
 
     private calculateAttackVectors(
@@ -241,9 +214,67 @@ export class BattleComponent implements OnInit, OnDestroy {
         return reducedSpells;
     }
 
+    private defineCPUAttackVector(): void {
+        const possibleAttacks = this.attackService.calculatePossibleAttacks(this.cpusAvailableAttackVectors);
+        const length = possibleAttacks.length;
+        if (length === 0) {
+            throw new Error('CPU не имеет векторов атак.');
+        }
+        const random = (Math.random() * 100000) % length;
+        this.cpuAttacks = possibleAttacks[random];
+    }
+
+    private calculateActivity(character: CharacterClass, attack: IPossibleAttack): ITurnActivity {
+        const target = this.allEntities.find(entity => entity.id === attack.target);
+        const hit = attack.hit;
+        const turnActivity = {
+            craftedSpells: this.reduceSpells(character.castedSpells),
+            characterAttacked: { ...attack, damage: 0 },
+            critFired: hit ? Math.random() <= character.currentData.crit : null,
+        };
+        if (!target) {
+            throw new Error('Не найдена цель атаки.');
+        }
+        if (hit) {
+            turnActivity.characterAttacked.damage = character.currentData.dps * (turnActivity.critFired ? 1.5 : 1);
+        } else {
+            if (attack.spell) {
+                this.castSpell(character, turnActivity, attack);
+            }
+        }
+        return turnActivity;
+    }
+
+    private castSpell(character: CharacterClass, turn: ITurnActivity, attack: IPossibleAttack): void {
+        const spell = attack.spell;
+        if (!spell) {
+            return;
+        }
+        const target = spell.target === 'self'
+            ? character
+            : this.allEntities.find(entity => entity.id === attack.target);
+        target.spellbound = { ...target.spellbound, [spell.spellName]: spell.duration };
+        character.castedSpells = { ...character.castedSpells, [spell.spellName]: spell.coolDown };
+        turn.craftedSpells = { ...turn.craftedSpells, [spell.spellName]: spell.coolDown };
+        if (spell.reduceHP) {
+            attack.damage = spell.HPDelta;
+        } else if (spell.addHP) {
+            attack.damage = -spell.HPDelta;
+        } else if (spell.callBeast) {
+            const beast = new BeastClass(spell.calledBeast, character.party);
+            this.store.dispatch(
+                addBeast({ beast })
+            );
+            turn.calledBeasts.push(beast.id);
+        }
+    }
+
     public turnRound(): void {
+        this.defineCPUAttackVector();
+        const playerActivity = this.calculateActivity(this.playerCharacter, this.playerAttacks);
+        console.log('playerActivity');
+        console.dir(playerActivity);
         // this.store.dispatch(turnCompleted({
-        //     userTurnAvailable: false,
         //     roundNumber: this.turnNumber,
         //     playersActivities: ITurnActivity;
         //     cpusActivities: ITurnActivity;
@@ -251,7 +282,4 @@ export class BattleComponent implements OnInit, OnDestroy {
         //     cpuCharacter: NAMES;
         // }));
     }
-
-
-
 }

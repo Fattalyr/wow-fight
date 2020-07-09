@@ -3,6 +3,7 @@ import { FormControl, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { IAvailableAttackVectors, IPossibleAttack } from '../models';
 import { CharacterClass } from '../classes/character.class';
 import { BeastClass } from '../classes/beast.class';
+import { AttackService } from '../services/attack.service';
 
 
 @Component({
@@ -20,13 +21,16 @@ export class AttackComponent implements OnInit {
     @Input('attackVectors')
     set attackVectors(value: IAvailableAttackVectors) {
         this._attackVectors = value;
-        this.listOfPossibleAttacks = this.calculatePossibleAttacks(value);
+        this.listOfPossibleAttacks = this.attackService.calculatePossibleAttacks(value);
     }
     get attackVectors(): IAvailableAttackVectors {
         return this._attackVectors;
     }
 
-    constructor(private cd: ChangeDetectorRef) { }
+    constructor(
+        private cd: ChangeDetectorRef,
+        private attackService: AttackService,
+    ) { }
     // tslint:disable-next-line:variable-name
     private _attackVectors: IAvailableAttackVectors;
 
@@ -51,23 +55,6 @@ export class AttackComponent implements OnInit {
 
     public writeValue(value: IPossibleAttack): void {
         this.value = value;
-    }
-
-    private calculatePossibleAttacks(availableVectors: IAvailableAttackVectors): IPossibleAttack[] {
-        const availableAttacks: IPossibleAttack[] = [];
-
-        for (const enemy of availableVectors.availableEnemies) {
-            if (availableVectors.canHit) {
-                availableAttacks.push({ target: enemy, hit: true });
-            }
-            if (availableVectors.spells.length > 0) {
-                for (const spell of availableVectors.spells) {
-                    availableAttacks.push({ target: enemy, spell, });
-                }
-            }
-        }
-
-        return availableAttacks;
     }
 
     public getEnemyName(target: string): string {

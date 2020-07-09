@@ -1,40 +1,23 @@
 import { Action, createReducer, on } from '@ngrx/store';
 import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
 import { deleteBattle, turnCompleted } from './battle.actions';
-import { SPELLS, IBeastsData } from '../../models';
+import { IPossibleAttack, CraftedSpells } from '../../models';
 
 
 export const battleFeatureKey = 'battle';
 
-export interface IBeastsAttack {
-    beast: string;  // UUID of BeastClass
-    target: string; // UUID of CharacterClass or BeastClass
-}
-
-export interface IBeastsDamages {
-    beast: string;  // UUID of BeastClass
-    damage: number | undefined; // Количество урона
-}
-
 export interface ITurnActivity {
-    target: string | null; // UUID of CharacterClass or BeastClass
-    meleeDamage?: boolean;
-    craftedSpells?: SPELLS[];
-    spellContinues?: number[];
+    craftedSpells?: CraftedSpells;
     calledBeasts?: string[]; // UUID of BeastClass
-    calledBeastsParams?: IBeastsData[];
-    beastsDamages?: IBeastsDamages[];
-    beastsTargets: IBeastsAttack[];
+    characterAttacked: IPossibleAttack | undefined;
+    beastsAttacked?: IPossibleAttack[];
     critFired: boolean | null;
 }
 
 export interface ITurn {
-    userTurnAvailable: boolean;
     roundNumber: number;
     playersActivities: ITurnActivity;
     cpusActivities: ITurnActivity;
-    playerCharacter: string; // UUID of CharacterClass
-    cpuCharacter: string;    // UUID of BeastClass
 }
 
 export interface ITurnActivitiesState extends EntityState<ITurn> {

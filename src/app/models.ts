@@ -58,11 +58,12 @@ export interface ICharacterData {
 }
 
 export type CraftedSpells = {
-    [n: string]: number; // SPELLS-значения
+    [n: string]: number; // SPELLS-значения, number - длительность
 } | undefined[];
 
 export interface IPossibleAttack {
     target: string;
     hit?: boolean;
     spell?: ISpell;
+    damage?: number;
 }
