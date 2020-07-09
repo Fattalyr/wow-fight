@@ -63,10 +63,6 @@ export class BattleComponent implements OnInit, OnDestroy {
         },
     };
 
-    public form: FormGroup = new FormGroup({
-        roundDuration: new FormControl(),
-    });
-
     public playerCharacter$ = this.store.pipe(
         select(selectPlayerCharacter)
     );
@@ -115,9 +111,15 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     public cpuPartyEntities: (CharacterClass | BeastClass)[] = [];
 
+    public allEntities: (CharacterClass | BeastClass)[] = [];
+
     public playersAvailableAttackVectors: IAvailableAttackVectors;
 
     public cpusAvailableAttackVectors: IAvailableAttackVectors;
+
+    public form: FormGroup = new FormGroup({
+        playerAttacksControl: new FormControl(),
+    });
 
     constructor(
         private store: Store,
@@ -158,6 +160,7 @@ export class BattleComponent implements OnInit, OnDestroy {
                 switchMap(({ playerParty, cpuParty, playerCharacter, cpuCharacter }) => this.turns$
                     .pipe(
                         tap(turns => {
+                            this.allEntities = [ ...playerParty, ...cpuParty ];
                             this.playersAvailableAttackVectors = this.calculateAttackVectors(turns, playerCharacter, cpuParty);
                             this.cpusAvailableAttackVectors = this.calculateAttackVectors(turns, cpuCharacter, playerParty);
                         }),
@@ -167,12 +170,11 @@ export class BattleComponent implements OnInit, OnDestroy {
             )
             .subscribe();
 
-        combineLatest([
-            this.playerCharacter$,
-            this.cpuCharacter$,
-        ])
+        this.form
+            .get('playerAttacksControl')
+            .valueChanges
             .pipe(
-
+                tap(value => console.log('attack', value)),
                 takeUntil(this.destroy$),
             )
             .subscribe();
@@ -231,8 +233,8 @@ export class BattleComponent implements OnInit, OnDestroy {
         const reducedSpells: CraftedSpells = [];
         if (craftedSpells.length > 0) {
             for (const spellName in craftedSpells) {
-                if (craftedSpells[ spellName ] > 0) {
-                    reducedSpells[ spellName ] = craftedSpells[ spellName ] - 1;
+                if (craftedSpells[spellName] > 0) {
+                    reducedSpells[spellName] = craftedSpells[spellName] - 1;
                 }
             }
         }

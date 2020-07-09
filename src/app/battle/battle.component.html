@@ -7,7 +7,18 @@
                 <app-character-card
                     [character]="(playerCharacter$ | async)"
                     [party]="'Вы'"
-                ></app-character-card>
+                >
+                    <div class="attack-console">
+                        <form [formGroup]="form">
+                            <app-attack
+                                formControlName="playerAttacksControl"
+                                [attackVectors]="playersAvailableAttackVectors"
+                                [allEntities]="allEntities"
+                                [playerCharacter]="playerCharacter$ | async"
+                            ></app-attack>
+                        </form>
+                    </div>
+                </app-character-card>
                 <app-character-card
                     [character]="(cpuCharacter$ | async)"
                     [party]="'CPU'"
@@ -38,6 +49,5 @@
                 Сделать ход
             </button>
         </p>
-
     </form>
 </div>

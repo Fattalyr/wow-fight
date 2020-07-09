@@ -1,19 +1,15 @@
 <div class="attack-outer">
-    <p class="centered">
-        Длительность хода:
-        <mat-radio-group formControlName="roundDuration" aria-label="Длительность хода:">
+    <div *ngIf="listOfPossibleAttacks.length">
+        <mat-radio-group [formControl]="attacksControl" aria-label="Варианты атаки">
             <mat-radio-button
-                *ngFor="let round of roundDurationValues"
-                [checked]="(roundDuration$ | async) === round"
-                [value]="round"
+                *ngFor="let attackOption of listOfPossibleAttacks"
+                (change)="changeAttack($event)"
+                [value]="attackOption"
             >
-                {{ round }}
-                {{
-                [ 2, 3, 4 ].includes(round)
-                    ? 'секунды'
-                    : (round > 4 ? 'секунд' : 'секунда')
-                }}
+                {{ attackOption.hit ? 'Ударить по' : '' }}
+                {{ attackOption.spell ? 'Наложить «' + attackOption.spell.spellName + '» на' : '' }}
+                {{ attackOption.spell?.target === 'self' ? 'себя' : getEnemyName(attackOption.target) }}
             </mat-radio-button>
         </mat-radio-group>
-    </p>
+    </div>
 </div>

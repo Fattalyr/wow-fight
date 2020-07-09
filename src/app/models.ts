@@ -60,3 +60,9 @@ export interface ICharacterData {
 export type CraftedSpells = {
     [n: string]: number; // SPELLS-значения
 } | undefined[];
+
+export interface IPossibleAttack {
+    target: string;
+    hit?: boolean;
+    spell?: ISpell;
+}

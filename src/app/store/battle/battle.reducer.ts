@@ -1,7 +1,7 @@
 import { Action, createReducer, on } from '@ngrx/store';
 import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
-import { BEASTS, SPELLS, NAMES, IBeastsData } from '../../constants/constants';
 import { deleteBattle, turnCompleted } from './battle.actions';
+import { SPELLS, IBeastsData } from '../../models';
 
 
 export const battleFeatureKey = 'battle';
