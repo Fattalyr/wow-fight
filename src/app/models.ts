@@ -67,3 +67,28 @@ export interface IPossibleAttack {
     spell?: ISpell;
     damage?: number;
 }
+
+export interface IMultipliers {
+    strength: ICalculatedParams;
+    agility: ICalculatedParams;
+    intellect: ICalculatedParams;
+    stamina: ICalculatedParams;
+}
+
+export interface ICharacterMutableCopy {
+    multipliers: IMultipliers;
+    inheritedData: ICharacterData;
+    currentData: ICharacterData;
+    calculateBasicParams: (characterData: ICharacterData) => ICalculatedParams;
+    updateCalculatedDataByCurrentData: () => void;
+    self: BEASTS | NAMES;
+    id: string;
+    party: string;
+    slug: string;
+    spellbound: CraftedSpells;
+    castedSpells: CraftedSpells;
+    _isAlive: boolean;
+    isAlive: boolean;
+    _isDead: boolean;
+    isDead: boolean;
+}

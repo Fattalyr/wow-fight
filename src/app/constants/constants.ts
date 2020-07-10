@@ -1,4 +1,4 @@
-import { BEASTS, NAMES, ISpell, SPELLS } from '../models';
+import { BEASTS, NAMES, ISpell, SPELLS, IMultipliers } from '../models';
 
 
 /**
@@ -95,7 +95,7 @@ export const CHARACTERS_START_DATA = {
     },
 };
 
-export const MULTIPLIERS = {
+export const MULTIPLIERS: IMultipliers = {
     strength: {
         dps: 1.5,
         hp: 2,

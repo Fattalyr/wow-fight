@@ -13,7 +13,16 @@ import {
 } from '../store/settings/settings.selectors';
 import { selectTotalTurns, selectTurns } from '../store/battle/battle.selectors';
 import { turnCompleted } from '../store/battle/battle.actions';
-import { NAMES, BEASTS, IAvailableAttackVectors, CraftedSpells, SPELLS, ISpell, IPossibleAttack, } from '../models';
+import {
+    NAMES,
+    BEASTS,
+    IAvailableAttackVectors,
+    CraftedSpells,
+    SPELLS,
+    ISpell,
+    IPossibleAttack,
+    ICharacterMutableCopy,
+} from '../models';
 import { ITurn, ITurnActivity } from '../store/battle/battle.reducer';
 import { CharacterClass } from '../classes/character.class';
 import { BeastClass } from '../classes/beast.class';
@@ -90,9 +99,9 @@ export class BattleComponent implements OnInit, OnDestroy {
         playerAttacksControl: new FormControl(),
     });
 
-    private playerCharacter: CharacterClass;
+    private playerCharacter: ICharacterMutableCopy;
 
-    private cpuCharacter: CharacterClass;
+    private cpuCharacter: ICharacterMutableCopy;
 
     constructor(
         private store: Store,
@@ -132,8 +141,8 @@ export class BattleComponent implements OnInit, OnDestroy {
                     this.allEntities = [ ...playerParty, ...cpuParty ];
                     this.playerPartyEntities = playerParty;
                     this.cpuPartyEntities = cpuParty;
-                    this.playerCharacter = playerCharacter;
-                    this.cpuCharacter = cpuCharacter;
+                    this.playerCharacter = { ...playerCharacter } as ICharacterMutableCopy;
+                    this.cpuCharacter = { ...cpuCharacter } as ICharacterMutableCopy;
                 }),
                 switchMap(({ playerParty, cpuParty, playerCharacter, cpuCharacter }) => this.turns$
                     .pipe(
@@ -224,12 +233,13 @@ export class BattleComponent implements OnInit, OnDestroy {
         this.cpuAttacks = possibleAttacks[random];
     }
 
-    private calculateActivity(character: CharacterClass, attack: IPossibleAttack): ITurnActivity {
+    private calculateActivity(character: ICharacterMutableCopy, attack: IPossibleAttack): ITurnActivity {
         const target = this.allEntities.find(entity => entity.id === attack.target);
         const hit = attack.hit;
         const turnActivity = {
             craftedSpells: this.reduceSpells(character.castedSpells),
             characterAttacked: { ...attack, damage: 0 },
+            // А тут будет просчёт ударов призванных существ.
             critFired: hit ? Math.random() <= character.currentData.crit : null,
         };
         if (!target) {
@@ -239,35 +249,52 @@ export class BattleComponent implements OnInit, OnDestroy {
             turnActivity.characterAttacked.damage = character.currentData.dps * (turnActivity.critFired ? 1.5 : 1);
         } else {
             if (attack.spell) {
-                this.castSpell(character, turnActivity, attack);
+                const { updatedCharacter, updatedTurn, updatedTarget } = this.castSpell(character, turnActivity, attack);
+                console.log('updatedCharacter', updatedCharacter);
             }
         }
         return turnActivity;
     }
 
-    private castSpell(character: CharacterClass, turn: ITurnActivity, attack: IPossibleAttack): void {
-        const spell = attack.spell;
-        if (!spell) {
-            return;
-        }
-        const target = spell.target === 'self'
-            ? character
-            : this.allEntities.find(entity => entity.id === attack.target);
-        target.spellbound = { ...target.spellbound, [spell.spellName]: spell.duration };
-        character.castedSpells = { ...character.castedSpells, [spell.spellName]: spell.coolDown };
-        turn.craftedSpells = { ...turn.craftedSpells, [spell.spellName]: spell.coolDown };
-        if (spell.reduceHP) {
-            attack.damage = spell.HPDelta;
-        } else if (spell.addHP) {
-            attack.damage = -spell.HPDelta;
-        } else if (spell.callBeast) {
-            const beast = new BeastClass(spell.calledBeast, character.party);
-            this.store.dispatch(
-                addBeast({ beast })
-            );
-            turn.calledBeasts.push(beast.id);
-        }
-    }
+    // private castSpell(
+    //     character: ICharacterMutableCopy,
+    //     immutableTurn: ITurnActivity,
+    //     attack: IPossibleAttack
+    // ): {
+    //     updatedCharacter: ICharacterMutableCopy,
+    //     updatedTurn: ITurnActivity,
+    //     updatedTarget: ICharacterMutableCopy,
+    // } {
+    //     const spell = attack.spell;
+    //     if (!spell) {
+    //         throw new Error('В векторе атаки отсутствует заклинание.');
+    //     }
+    //     const turn = { ...immutableTurn };
+    //     const target: ICharacterMutableCopy = spell.target === 'self'
+    //         ? character
+    //         : {
+    //         ...this.allEntities
+    //             .find(entity => entity.id === attack.target)
+    //         } as ICharacterMutableCopy;
+    //     target.spellbound = { ...target.spellbound, [spell.spellName]: spell.duration };
+    //     character.castedSpells = { ...character.castedSpells, [spell.spellName]: spell.coolDown };
+    //     turn.craftedSpells = { ...turn.craftedSpells, [spell.spellName]: spell.coolDown };
+    //     if (spell.reduceHP) {
+    //         attack.damage = spell.HPDelta;
+    //     } else if (spell.addHP) {
+    //         attack.damage = -spell.HPDelta;
+    //     } else if (spell.callBeast) {
+    //         const beast = new BeastClass(spell.calledBeast, character.party);
+    //         this.store.dispatch(
+    //             addBeast({ beast })
+    //         );
+    //         if (!turn.calledBeasts) {
+    //             turn.calledBeasts = [];
+    //         }
+    //         turn.calledBeasts.push(beast.id);
+    //     }
+    //     return { updatedCharacter: character, updatedTurn: turn, updatedTarget: target };
+    // }
 
     public turnRound(): void {
         this.defineCPUAttackVector();
