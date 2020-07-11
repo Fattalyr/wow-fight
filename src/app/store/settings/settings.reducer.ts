@@ -3,7 +3,7 @@ import { UUID } from 'angular2-uuid';
 import * as SettingsActions from './settings.actions';
 import { CharacterClass } from '../../classes/character.class';
 import { BeastClass } from '../../classes/beast.class';
-import { NAMES } from '../../models';
+import { ICharacterMutableCopy, NAMES } from '../../models';
 import { CHARACTERS_START_DATA } from '../../constants/constants';
 
 
@@ -13,9 +13,9 @@ const cpuPartyId = UUID.UUID();
 export interface ISettingsState {
     playerPartyId: string;
     cpuPartyId: string;
-    playerCharacter: CharacterClass;
+    playerCharacter: CharacterClass | ICharacterMutableCopy;
     playerBeasts: Array<BeastClass | undefined>;
-    cpuCharacter: CharacterClass;
+    cpuCharacter: CharacterClass | ICharacterMutableCopy;
     cpuBeasts: Array<BeastClass | undefined>;
 }
 

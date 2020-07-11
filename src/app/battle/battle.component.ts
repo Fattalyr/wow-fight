@@ -2,13 +2,21 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { select, Store } from '@ngrx/store';
 import { combineLatest, Subject } from 'rxjs';
-import { map, tap, switchMap, takeUntil, } from 'rxjs/operators';
 import {
-    selectCPUBeasts,
-    selectCPUCharacter,
-    selectCPUPartyId, selectPlayerBeasts,
+    map,
+    tap,
+    switchMap,
+    takeUntil,
+    filter,
+    finalize,
+} from 'rxjs/operators';
+import {
     selectPlayerCharacter,
+    selectCPUCharacter,
+    selectPlayerBeasts,
+    selectCPUBeasts,
     selectPlayerPartyId,
+    selectCPUPartyId,
     selectSettings
 } from '../store/settings/settings.selectors';
 import { selectTotalTurns, selectTurns } from '../store/battle/battle.selectors';
@@ -16,12 +24,18 @@ import { turnCompleted } from '../store/battle/battle.actions';
 import {
     NAMES,
     BEASTS,
+    SPELL_TARGET,
     IAvailableAttackVectors,
     CraftedSpells,
     SPELLS,
     ISpell,
     IPossibleAttack,
     ICharacterMutableCopy,
+    IBeastsData,
+    IAttacks,
+    Party,
+    Vector,
+    ITUpdatedParties,
 } from '../models';
 import { ITurn, ITurnActivity } from '../store/battle/battle.reducer';
 import { CharacterClass } from '../classes/character.class';
@@ -75,17 +89,20 @@ export class BattleComponent implements OnInit, OnDestroy {
         select(selectTotalTurns)
     );
 
-    public currentTurn: ITurn;
+    public turnIsCalculating = false;
+
+    private newTurnInitSubject$ = new Subject<IAttacks>();
+    public newTurnInit$ = this.newTurnInitSubject$.asObservable();
 
     public turnNumber: number;
 
     private destroy$ = new Subject<void>();
 
-    public playerPartyEntities: (CharacterClass | BeastClass)[] = [];
+    public playerPartyEntities: Party = [];
 
-    public cpuPartyEntities: (CharacterClass | BeastClass)[] = [];
+    public cpuPartyEntities: Party = [];
 
-    public allEntities: (CharacterClass | BeastClass)[] = [];
+    public allEntities: Party = [];
 
     public playersAvailableAttackVectors: IAvailableAttackVectors;
 
@@ -119,7 +136,7 @@ export class BattleComponent implements OnInit, OnDestroy {
             )
             .subscribe();
 
-        combineLatest([
+        const combinePartyValues$ = combineLatest([
             this.playerCharacter$,
             this.cpuCharacter$,
             this.playerBeasts$,
@@ -127,16 +144,20 @@ export class BattleComponent implements OnInit, OnDestroy {
         ])
             .pipe(
                 map(([
-                     playerCharacter,
-                     cpuCharacter,
-                     playerBeasts,
-                     cpuBeasts
+                    playerCharacter,
+                    cpuCharacter,
+                    playerBeasts,
+                    cpuBeasts
                 ]) => ({
                     playerParty: [ ...playerBeasts, playerCharacter ],
                     cpuParty: [...cpuBeasts, cpuCharacter],
-                    playerCharacter,
-                    cpuCharacter,
-                })),
+                    playerCharacter: { ...playerCharacter } as ICharacterMutableCopy,
+                    cpuCharacter: { ...cpuCharacter } as ICharacterMutableCopy,
+                }))
+            );
+
+        combinePartyValues$
+            .pipe(
                 tap(({ playerParty, cpuParty, playerCharacter, cpuCharacter }) => {
                     this.allEntities = [ ...playerParty, ...cpuParty ];
                     this.playerPartyEntities = playerParty;
@@ -164,6 +185,66 @@ export class BattleComponent implements OnInit, OnDestroy {
                 takeUntil(this.destroy$),
             )
             .subscribe();
+
+        this.newTurnInit$
+            .pipe(
+                filter(() => this.turnIsCalculating),
+                map(({ cpuAttackVector, playerAttackVector }): ITurn => {
+                    const playerActivity = this.calculateActivity(this.playerCharacter, playerAttackVector);
+                    const cpuActivity = this.calculateActivity(this.cpuCharacter, cpuAttackVector);
+                    console.log(' ');
+                    console.log('player', this.playerCharacter.id);
+                    console.log('playerActivity', playerActivity);
+                    console.log('cpu', this.cpuCharacter.id);
+                    console.log('cpuActivity', cpuActivity);
+                    // this.store.dispatch(
+                    //     turnCompleted({
+                    //         turn: {
+                    //             roundNumber: this.turnNumber,
+                    //             playersActivities: playerActivity,
+                    //             cpusActivities: cpuActivity,
+                    //         }
+                    //     })
+                    // );
+                    return {
+                        roundNumber: this.turnNumber,
+                        playersActivities: playerActivity,
+                        cpusActivities: cpuActivity,
+                    };
+                }),
+                switchMap((turn: ITurn) => combinePartyValues$
+                    .pipe(
+                        map(({
+                            playerParty,
+                            cpuParty,
+                            playerCharacter,
+                            cpuCharacter,
+                        }) => ({
+                            turn,
+                            playerParty,
+                            cpuParty,
+                            playerCharacter,
+                            cpuCharacter,
+                        })),
+                    ),
+                ),
+                /**
+                 * @description Применяем атаку пользователя.
+                 */
+                map(({ turn, playerParty, cpuParty, playerCharacter, cpuCharacter }) => {
+                    const { roundNumber, playersActivities, cpusActivities } = turn;
+
+                    const {
+                        updatedPlayerCharacter,
+                        updatedCpuCharacter,
+                        updatedPlayerParty,
+                        updatedCpuParty
+                    } = this.applyAttack(playerCharacter, turn, cpuCharacter, playerParty, cpuParty);
+                }),
+                takeUntil(this.destroy$),
+                finalize(() => this.turnIsCalculating = false),
+            )
+            .subscribe();
     }
 
     ngOnDestroy(): void {
@@ -172,8 +253,8 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     private calculateAttackVectors(
         turns: ITurn[],
-        character: CharacterClass,
-        availableEnemies: (CharacterClass | BeastClass)[]
+        character: ICharacterMutableCopy,
+        availableEnemies: Party
     ): IAvailableAttackVectors {
         const len = turns.length;
         const enemies: string[] = [];
@@ -229,7 +310,7 @@ export class BattleComponent implements OnInit, OnDestroy {
         if (length === 0) {
             throw new Error('CPU не имеет векторов атак.');
         }
-        const random = (Math.random() * 100000) % length;
+        const random = Math.round(Math.random() * 100000) % length;
         this.cpuAttacks = possibleAttacks[random];
     }
 
@@ -239,7 +320,6 @@ export class BattleComponent implements OnInit, OnDestroy {
         const turnActivity = {
             craftedSpells: this.reduceSpells(character.castedSpells),
             characterAttacked: { ...attack, damage: 0 },
-            // А тут будет просчёт ударов призванных существ.
             critFired: hit ? Math.random() <= character.currentData.crit : null,
         };
         if (!target) {
@@ -248,65 +328,62 @@ export class BattleComponent implements OnInit, OnDestroy {
         if (hit) {
             turnActivity.characterAttacked.damage = character.currentData.dps * (turnActivity.critFired ? 1.5 : 1);
         } else {
-            if (attack.spell) {
-                const { updatedCharacter, updatedTurn, updatedTarget } = this.castSpell(character, turnActivity, attack);
-                console.log('updatedCharacter', updatedCharacter);
+            if (attack?.spell?.HPDelta) {
+                turnActivity.characterAttacked.damage = this.calculateSpellDamage(attack.spell);
+                if (attack.spell.target === SPELL_TARGET.SELF) {
+                    turnActivity.characterAttacked.target = character.id;
+                }
+            } else if (attack?.spell?.callBeast) {
+                turnActivity.characterAttacked.spell.calledBeast = this.callSpellBeast(attack.spell, character.party);
             }
         }
         return turnActivity;
     }
 
-    // private castSpell(
-    //     character: ICharacterMutableCopy,
-    //     immutableTurn: ITurnActivity,
-    //     attack: IPossibleAttack
-    // ): {
-    //     updatedCharacter: ICharacterMutableCopy,
-    //     updatedTurn: ITurnActivity,
-    //     updatedTarget: ICharacterMutableCopy,
-    // } {
-    //     const spell = attack.spell;
-    //     if (!spell) {
-    //         throw new Error('В векторе атаки отсутствует заклинание.');
-    //     }
-    //     const turn = { ...immutableTurn };
-    //     const target: ICharacterMutableCopy = spell.target === 'self'
-    //         ? character
-    //         : {
-    //         ...this.allEntities
-    //             .find(entity => entity.id === attack.target)
-    //         } as ICharacterMutableCopy;
-    //     target.spellbound = { ...target.spellbound, [spell.spellName]: spell.duration };
-    //     character.castedSpells = { ...character.castedSpells, [spell.spellName]: spell.coolDown };
-    //     turn.craftedSpells = { ...turn.craftedSpells, [spell.spellName]: spell.coolDown };
-    //     if (spell.reduceHP) {
-    //         attack.damage = spell.HPDelta;
-    //     } else if (spell.addHP) {
-    //         attack.damage = -spell.HPDelta;
-    //     } else if (spell.callBeast) {
-    //         const beast = new BeastClass(spell.calledBeast, character.party);
-    //         this.store.dispatch(
-    //             addBeast({ beast })
-    //         );
-    //         if (!turn.calledBeasts) {
-    //             turn.calledBeasts = [];
-    //         }
-    //         turn.calledBeasts.push(beast.id);
-    //     }
-    //     return { updatedCharacter: character, updatedTurn: turn, updatedTarget: target };
-    // }
+    private calculateSpellDamage(spell: ISpell): number {
+        return spell.HPDelta;
+    }
+
+    private callSpellBeast(spell: ISpell, party: string): IBeastsData {
+        const newBeast = new BeastClass(spell.calledBeast, party);
+        this.store.dispatch(addBeast({ beast: newBeast }));
+        return { ...spell.calledBeast, id: newBeast.id };
+    }
+
+    private applyAttack(
+        turn: ITurn,
+        playerCharacter: ICharacterMutableCopy,
+        cpuCharacter: ICharacterMutableCopy,
+        playerParty: Party,
+        cpuParty: Party,
+        vector: Vector
+    ): ITUpdatedParties {
+        /**
+         * @description Простые атаки
+         */
+        if (
+            [
+                Vector.CPUS_BEAST_VS_PLAYER,
+                Vector.PLAYERS_BEAST_VS_CPU,
+                Vector.CPUS_BEAST_VS_PLAYERS_BEAST,
+                Vector.PLAYERS_BEAST_VS_CPUS_BEAST
+            ].includes(vector)
+        ) {
+            if (vector === Vector.CPUS_BEAST_VS_PLAYER) {
+
+            }
+        }
+    }
 
     public turnRound(): void {
+        this.turnIsCalculating = true;
         this.defineCPUAttackVector();
-        const playerActivity = this.calculateActivity(this.playerCharacter, this.playerAttacks);
-        console.log('playerActivity');
-        console.dir(playerActivity);
-        // this.store.dispatch(turnCompleted({
-        //     roundNumber: this.turnNumber,
-        //     playersActivities: ITurnActivity;
-        //     cpusActivities: ITurnActivity;
-        //     playerCharacter: NAMES;
-        //     cpuCharacter: NAMES;
-        // }));
+
+        this.newTurnInitSubject$.next(
+            {
+                cpuAttackVector: this.cpuAttacks,
+                playerAttackVector: this.playerAttacks,
+            }
+        );
     }
 }
