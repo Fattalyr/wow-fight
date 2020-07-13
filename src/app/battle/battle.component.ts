@@ -2,46 +2,40 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl, FormGroup } from '@angular/forms';
 import { select, Store } from '@ngrx/store';
 import { combineLatest, Subject } from 'rxjs';
+import { distinctUntilChanged, filter, finalize, map, switchMap, take, takeUntil, tap } from 'rxjs/operators';
+import deepUnfreeze from 'deep-unfreeze';
+import isEqual from 'lodash.isequal';
 import {
-    map,
-    tap,
-    switchMap,
-    takeUntil,
-    filter,
-    finalize,
-} from 'rxjs/operators';
-import {
-    selectPlayerCharacter,
-    selectCPUCharacter,
-    selectPlayerBeasts,
     selectCPUBeasts,
-    selectPlayerPartyId,
+    selectCPUCharacter,
     selectCPUPartyId,
-    selectSettings
+    selectPlayerBeasts,
+    selectPlayerCharacter,
+    selectPlayerPartyId,
+    selectSettings,
 } from '../store/settings/settings.selectors';
 import { selectTotalTurns, selectTurns } from '../store/battle/battle.selectors';
-import { turnCompleted } from '../store/battle/battle.actions';
 import {
     NAMES,
-    BEASTS,
-    SPELL_TARGET,
-    IAvailableAttackVectors,
-    CraftedSpells,
     SPELLS,
-    ISpell,
-    IPossibleAttack,
-    ICharacterMutableCopy,
-    IBeastsData,
+    CraftedSpells,
     IAttacks,
+    IAvailableAttackVectors,
+    IBeastsData,
+    ICharacterMutableCopy,
+    IBeastMutableCopy,
+    IPossibleAttack,
+    ISpell,
     Party,
+    SPELL_TARGET,
     Vector,
-    ITUpdatedParties,
 } from '../models';
 import { ITurn, ITurnActivity } from '../store/battle/battle.reducer';
-import { CharacterClass } from '../classes/character.class';
 import { BeastClass } from '../classes/beast.class';
 import { AttackService } from '../services/attack.service';
-import { addBeast } from '../store/settings/settings.actions';
+import { addBeast, updateCPUCharacter, updatePlayerCharacter } from '../store/settings/settings.actions';
+import { turnCompleted } from '../store/battle/battle.actions';
+import { CharacterClass } from '../classes/character.class';
 
 
 @Component({
@@ -120,6 +114,14 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     private cpuCharacter: ICharacterMutableCopy;
 
+    private playerBeasts: IBeastMutableCopy[] = [];
+
+    private cpuBeasts: IBeastMutableCopy[] = [];
+
+    private immutablePlayerCharacter: CharacterClass | ICharacterMutableCopy;
+
+    private immutableCpuCharacter: CharacterClass | ICharacterMutableCopy;
+
     constructor(
         private store: Store,
         private attackService: AttackService,
@@ -143,28 +145,62 @@ export class BattleComponent implements OnInit, OnDestroy {
             this.cpuBeasts$,
         ])
             .pipe(
+                distinctUntilChanged(isEqual),
+                // filter(([
+                //     playerCharacter,
+                //     cpuCharacter,
+                //     playerBeasts,
+                //     cpuBeasts
+                // ]) => !isEqual(playerCharacter, this.playerCharacter)
+                //     || !isEqual(cpuCharacter, this.cpuCharacter)
+                //     || !this.beastsAreEqual(playerBeasts, this.playerBeasts)
+                //     || !this.beastsAreEqual(cpuBeasts, this.cpuBeasts)
+                // ),
                 map(([
                     playerCharacter,
                     cpuCharacter,
                     playerBeasts,
                     cpuBeasts
-                ]) => ({
-                    playerParty: [ ...playerBeasts, playerCharacter ],
-                    cpuParty: [...cpuBeasts, cpuCharacter],
-                    playerCharacter: { ...playerCharacter } as ICharacterMutableCopy,
-                    cpuCharacter: { ...cpuCharacter } as ICharacterMutableCopy,
-                }))
+                ]) => {
+                    this.immutablePlayerCharacter = playerCharacter;
+                    this.immutableCpuCharacter = cpuCharacter;
+
+                    return {
+                        playerParty: [ ...deepUnfreeze(playerBeasts), { ...deepUnfreeze(playerCharacter) } ],
+                        cpuParty: [ ...deepUnfreeze(cpuBeasts), { ...deepUnfreeze(cpuCharacter) } ],
+                        playerCharacter: { ...deepUnfreeze(playerCharacter) } as ICharacterMutableCopy,
+                        cpuCharacter: { ...deepUnfreeze(cpuCharacter) } as ICharacterMutableCopy,
+                        playerBeasts: [ ...deepUnfreeze(playerBeasts) ],
+                        cpuBeasts: [ ...deepUnfreeze(cpuBeasts) ],
+                    };
+                }),
+                tap(({ playerParty, cpuParty, playerCharacter, cpuCharacter, playerBeasts, cpuBeasts }) => {
+                    this.allEntities = [ ...playerParty, ...cpuParty ];
+                    this.playerPartyEntities = playerParty;
+                    this.cpuPartyEntities = cpuParty;
+                    this.playerCharacter = playerCharacter;
+                    this.cpuCharacter = cpuCharacter;
+                    this.playerBeasts = playerBeasts;
+                    this.cpuBeasts = cpuBeasts;
+                }),
+                map(({
+                    playerParty,
+                    cpuParty,
+                    playerCharacter,
+                    cpuCharacter,
+                    playerBeasts,
+                    cpuBeasts
+                }) => ({
+                    playerParty,
+                    cpuParty,
+                    playerCharacter,
+                    cpuCharacter,
+                })),
+                take(25),
             );
 
         combinePartyValues$
             .pipe(
-                tap(({ playerParty, cpuParty, playerCharacter, cpuCharacter }) => {
-                    this.allEntities = [ ...playerParty, ...cpuParty ];
-                    this.playerPartyEntities = playerParty;
-                    this.cpuPartyEntities = cpuParty;
-                    this.playerCharacter = { ...playerCharacter } as ICharacterMutableCopy;
-                    this.cpuCharacter = { ...cpuCharacter } as ICharacterMutableCopy;
-                }),
                 switchMap(({ playerParty, cpuParty, playerCharacter, cpuCharacter }) => this.turns$
                     .pipe(
                         tap(turns => {
@@ -188,24 +224,12 @@ export class BattleComponent implements OnInit, OnDestroy {
 
         this.newTurnInit$
             .pipe(
+                map((value: IAttacks) => deepUnfreeze(value)),
                 filter(() => this.turnIsCalculating),
                 map(({ cpuAttackVector, playerAttackVector }): ITurn => {
                     const playerActivity = this.calculateActivity(this.playerCharacter, playerAttackVector);
                     const cpuActivity = this.calculateActivity(this.cpuCharacter, cpuAttackVector);
-                    console.log(' ');
-                    console.log('player', this.playerCharacter.id);
-                    console.log('playerActivity', playerActivity);
-                    console.log('cpu', this.cpuCharacter.id);
-                    console.log('cpuActivity', cpuActivity);
-                    // this.store.dispatch(
-                    //     turnCompleted({
-                    //         turn: {
-                    //             roundNumber: this.turnNumber,
-                    //             playersActivities: playerActivity,
-                    //             cpusActivities: cpuActivity,
-                    //         }
-                    //     })
-                    // );
+
                     return {
                         roundNumber: this.turnNumber,
                         playersActivities: playerActivity,
@@ -232,19 +256,42 @@ export class BattleComponent implements OnInit, OnDestroy {
                  * @description Применяем атаку пользователя.
                  */
                 map(({ turn, playerParty, cpuParty, playerCharacter, cpuCharacter }) => {
-                    const { roundNumber, playersActivities, cpusActivities } = turn;
-
                     const {
                         updatedPlayerCharacter,
                         updatedCpuCharacter,
                         updatedPlayerParty,
                         updatedCpuParty
-                    } = this.applyAttack(playerCharacter, turn, cpuCharacter, playerParty, cpuParty);
+                    } = this.attackService.applyAttack(turn, playerCharacter, cpuCharacter, playerParty, cpuParty, Vector.PLAYER_VS_CPU);
+
+                    return {
+                        turn,
+                        playerParty: updatedPlayerParty,
+                        cpuParty: updatedCpuParty,
+                        playerCharacter: updatedPlayerCharacter,
+                        cpuCharacter: updatedCpuCharacter,
+                    };
                 }),
+                tap(val => console.log(val)),
                 takeUntil(this.destroy$),
                 finalize(() => this.turnIsCalculating = false),
             )
-            .subscribe();
+            .subscribe(({
+                turn,
+                playerParty,
+                cpuParty,
+                playerCharacter,
+                cpuCharacter
+            }) => {
+                this.store.dispatch(turnCompleted({ turn }));
+                console.log(playerCharacter);
+                console.log(this.playerCharacter);
+                if (!isEqual(playerCharacter, this.immutablePlayerCharacter)) {
+                    this.store.dispatch(updatePlayerCharacter({ playerCharacter }));
+                }
+                if (!isEqual(cpuCharacter, this.immutableCpuCharacter)) {
+                    this.store.dispatch(updateCPUCharacter({ cpuCharacter }));
+                }
+            });
     }
 
     ngOnDestroy(): void {
@@ -317,11 +364,11 @@ export class BattleComponent implements OnInit, OnDestroy {
     private calculateActivity(character: ICharacterMutableCopy, attack: IPossibleAttack): ITurnActivity {
         const target = this.allEntities.find(entity => entity.id === attack.target);
         const hit = attack.hit;
-        const turnActivity = {
+        const turnActivity = deepUnfreeze({
             craftedSpells: this.reduceSpells(character.castedSpells),
             characterAttacked: { ...attack, damage: 0 },
             critFired: hit ? Math.random() <= character.currentData.crit : null,
-        };
+        });
         if (!target) {
             throw new Error('Не найдена цель атаки.');
         }
@@ -348,31 +395,6 @@ export class BattleComponent implements OnInit, OnDestroy {
         const newBeast = new BeastClass(spell.calledBeast, party);
         this.store.dispatch(addBeast({ beast: newBeast }));
         return { ...spell.calledBeast, id: newBeast.id };
-    }
-
-    private applyAttack(
-        turn: ITurn,
-        playerCharacter: ICharacterMutableCopy,
-        cpuCharacter: ICharacterMutableCopy,
-        playerParty: Party,
-        cpuParty: Party,
-        vector: Vector
-    ): ITUpdatedParties {
-        /**
-         * @description Простые атаки
-         */
-        if (
-            [
-                Vector.CPUS_BEAST_VS_PLAYER,
-                Vector.PLAYERS_BEAST_VS_CPU,
-                Vector.CPUS_BEAST_VS_PLAYERS_BEAST,
-                Vector.PLAYERS_BEAST_VS_CPUS_BEAST
-            ].includes(vector)
-        ) {
-            if (vector === Vector.CPUS_BEAST_VS_PLAYER) {
-
-            }
-        }
     }
 
     public turnRound(): void {

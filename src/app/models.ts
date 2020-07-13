@@ -1,5 +1,6 @@
-import {CharacterClass} from "./classes/character.class";
-import {BeastClass} from "./classes/beast.class";
+import { CharacterClass } from './classes/character.class';
+import { BeastClass } from './classes/beast.class';
+
 
 export enum NAMES {
     GULDAN = 'Гул\'Дан',
@@ -102,12 +103,27 @@ export interface ICharacterMutableCopy {
     isDead: boolean;
 }
 
+export interface IBeastMutableCopy {
+    inheritedData: IBeastsData;
+    currentData: IBeastsData;
+    self: BEASTS | NAMES;
+    id: string;
+    party: string;
+    slug: string;
+    spellbound: CraftedSpells;
+    castedSpells: CraftedSpells;
+    _isAlive: boolean;
+    isAlive: boolean;
+    _isDead: boolean;
+    isDead: boolean;
+}
+
 export interface IAttacks {
     cpuAttackVector: IPossibleAttack;
     playerAttackVector: IPossibleAttack;
 }
 
-export type Party = (CharacterClass | BeastClass | ICharacterMutableCopy)[];
+export type Party = (CharacterClass | BeastClass | ICharacterMutableCopy | IBeastMutableCopy)[];
 
 export interface ITUpdatedParties {
     updatedPlayerCharacter: ICharacterMutableCopy;
@@ -119,8 +135,13 @@ export interface ITUpdatedParties {
 export enum Vector {
     PLAYER_VS_CPU = 'player -> cpu',
     CPU_VS_PLAYER = 'cpu -> player',
-    CPUS_BEAST_VS_PLAYER = 'cpu\'s beast -> player',
-    PLAYERS_BEAST_VS_CPU = 'player\'s beast -> cpu',
-    CPUS_BEAST_VS_PLAYERS_BEAST = 'cpu\'s beast -> player\'s beast',
-    PLAYERS_BEAST_VS_CPUS_BEAST = 'player\'s beast -> cpu\'s beast',
+    CPUS_BEAST_VS_PLAYERS_PARTY = 'cpu\'s beast -> player\'s party',
+    PLAYERS_BEAST_VS_CPUS_PARTY = 'player\'s beast -> cpu\'s party',
+}
+
+export interface ISpellAttackResult {
+    assaulter: ICharacterMutableCopy;
+    defending: ICharacterMutableCopy;
+    assaulterParty: Party;
+    defendingParty: Party;
 }

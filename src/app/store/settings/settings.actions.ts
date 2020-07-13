@@ -1,7 +1,7 @@
 import { createAction, props } from '@ngrx/store';
 import { CharacterClass } from '../../classes/character.class';
 import { BeastClass } from '../../classes/beast.class';
-import { ICharacterMutableCopy } from '../../models';
+import { IBeastMutableCopy, ICharacterMutableCopy } from '../../models';
 
 export const updatePlayerCharacter = createAction(
     `[ SETTINGS ] Update Player Character`,
@@ -15,12 +15,12 @@ export const updateCPUCharacter = createAction(
 
 export const addBeast = createAction(
     `[ SETTINGS ] Add New Beast`,
-    props<{ beast: BeastClass }>()
+    props<{ beast: BeastClass | IBeastMutableCopy }>()
 );
 
 export const updateBeast = createAction(
     `[ SETTINGS ] Update Beast`,
-    props<{ beast: BeastClass }>()
+    props<{ beast: BeastClass | IBeastMutableCopy }>()
 );
 
 export const toggleCharacters = createAction(

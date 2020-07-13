@@ -1,4 +1,4 @@
-import { BEASTS, NAMES, ISpell, SPELLS, IMultipliers } from '../models';
+import { BEASTS, NAMES, ISpell, SPELLS, IMultipliers, SPELL_TARGET } from '../models';
 
 
 /**
@@ -15,7 +15,7 @@ export const BEASTS_DATA = {
 export const SPELL_FEAR: ISpell = {
     spellName: SPELLS.FEAR,
     duration: 3,
-    target: 'enemy',
+    target: SPELL_TARGET.ENEMY,
     canNotAttacks: true,
     addHP: false,
     reduceHP: false,
@@ -26,7 +26,7 @@ export const SPELL_FEAR: ISpell = {
 export const SPELL_FILTH: ISpell = {
     spellName: SPELLS.FILTH,
     duration: 1,
-    target: 'enemy',
+    target: SPELL_TARGET.ENEMY,
     canNotAttacks: false,
     addHP: false,
     reduceHP: true,
@@ -38,7 +38,7 @@ export const SPELL_FILTH: ISpell = {
 export const SPELL_ANCESTRAL_SPIRIT: ISpell = {
     spellName: SPELLS.ANCESTRAL_SPIRIT,
     duration: 1,
-    target: 'self',
+    target: SPELL_TARGET.SELF,
     canNotAttacks: false,
     addHP: true,
     reduceHP: false,
@@ -50,7 +50,7 @@ export const SPELL_ANCESTRAL_SPIRIT: ISpell = {
 export const SPELL_REBIRTH: ISpell = {
     spellName: SPELLS.REBIRTH,
     duration: 1,
-    target: 'self',
+    target: SPELL_TARGET.SELF,
     canNotAttacks: false,
     addHP: false,
     reduceHP: false,

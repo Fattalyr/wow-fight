@@ -7,7 +7,7 @@
             <div class="hp-indicator">
                 <div
                     class="hp-current"
-                    [style]="{ height: character.currentData.hp / character.inheritedData.hp * 100 }"
+                    [style]="{ height: (character.currentData.hp / character.inheritedData.hp * 100) + '%' }"
                 ></div>
             </div>
             <div class="hero-name">
