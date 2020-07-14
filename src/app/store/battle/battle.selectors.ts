@@ -10,3 +10,8 @@ export const selectTotalTurns = createSelector(
     createFeatureSelector(battleFeatureKey),
     selectAllTurnsNumber,
 );
+
+export const selectCurrentMove = createSelector(
+    (state) => state[battleFeatureKey],
+    (state) => state.movingCurrentStage,
+);

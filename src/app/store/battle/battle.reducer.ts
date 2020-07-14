@@ -1,7 +1,7 @@
 import { Action, createReducer, on } from '@ngrx/store';
 import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
-import { deleteBattle, playerPassedTurn, turnCompleted } from './battle.actions';
-import { IPossibleAttack, CraftedSpells, MOVING_QUERY } from '../../models';
+import { deleteBattle, nextMove, playerPassedTurn, turnCompleted } from './battle.actions';
+import { IPossibleAttack, CraftedSpells, MOVING_STATUS } from '../../models';
 
 
 export const battleFeatureKey = 'battle';
@@ -22,8 +22,7 @@ export interface ITurn {
 
 export interface ITurnActivitiesState extends EntityState<ITurn> {
     playerPassedTurn: boolean; // Игрок нажал кнопку "Сделать ход" и теперь происходят действия по цепочке.
-    movingQuery: MOVING_QUERY[];
-    movingCurrentStage: MOVING_QUERY;
+    movingCurrentStage: MOVING_STATUS;
 }
 
 const adapter: EntityAdapter<ITurn> = createEntityAdapter<ITurn>({
@@ -32,14 +31,7 @@ const adapter: EntityAdapter<ITurn> = createEntityAdapter<ITurn>({
 
 const initialState: ITurnActivitiesState = adapter.getInitialState({
     playerPassedTurn: false,
-    movingQuery: [
-        MOVING_QUERY.WAITING,
-        MOVING_QUERY.PLAYER,
-        MOVING_QUERY.PLAYERS_BEASTS,
-        MOVING_QUERY.CPU,
-        MOVING_QUERY.CPUS_BEASTS,
-    ],
-    movingCurrentStage: MOVING_QUERY.PLAYER,
+    movingCurrentStage: MOVING_STATUS.WAITING,
 });
 
 const turnActivitiesReducerFn = createReducer(
@@ -54,6 +46,10 @@ const turnActivitiesReducerFn = createReducer(
         ...state,
         playerPassedTurn: true,
     })),
+    on(nextMove, (state, { move }) => ({
+        ...state,
+        movingCurrentStage: move,
+    }))
 );
 
 export function reducer(state: ITurnActivitiesState, action: Action): ITurnActivitiesState {

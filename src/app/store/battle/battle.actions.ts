@@ -1,6 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { ITurn } from './battle.reducer';
-import { MOVING_QUERY } from '../../models';
+import { MOVING_STATUS } from '../../models';
 
 export const turnCompleted = createAction(
     `[ BATTLE ] Turn Completed`,
@@ -15,18 +15,7 @@ export const playerPassedTurn = createAction(
     `[ MOVE ] Player Passed Turn`,
 );
 
-export const playerIsMoving = createAction(
-    `[ MOVE ] Now Attacking: ${ MOVING_QUERY.PLAYER }`
-);
-
-export const CPUIsMoving = createAction(
-    `[ MOVE ] Now Attacking: ${ MOVING_QUERY.CPU }`
-);
-
-export const playersBeastsAreMoving = createAction(
-    `[ MOVE ] Now Attackoing: ${ MOVING_QUERY.PLAYERS_BEASTS }`
-);
-
-export const CPUsBeastsAreMoving = createAction(
-    `[ MOVE ] Now Attackoing: ${ MOVING_QUERY.CPUS_BEASTS }`
+export const nextMove = createAction(
+    `[ MOVE ] Next Move`,
+    props<{ move: MOVING_STATUS }>()
 );

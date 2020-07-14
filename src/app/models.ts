@@ -145,8 +145,8 @@ export interface ISpellAttackResult {
     defendingParty: Party;
 }
 
-export enum MOVING_QUERY {
-    WAITING= 'waiting',
+export enum MOVING_STATUS {
+    WAITING = 'waiting',
     PLAYER = 'player',
     CPU = 'CPU',
     PLAYERS_BEASTS = 'player\'s bests',

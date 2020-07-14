@@ -1,5 +1,13 @@
-import { BEASTS, NAMES, ISpell, SPELLS, IMultipliers, SPELL_TARGET } from '../models';
+import { BEASTS, NAMES, ISpell, SPELLS, IMultipliers, SPELL_TARGET, MOVING_STATUS } from '../models';
 
+
+export const MOVING_QUERY = [
+    MOVING_STATUS.WAITING,
+    MOVING_STATUS.PLAYER,
+    MOVING_STATUS.PLAYERS_BEASTS,
+    MOVING_STATUS.CPU,
+    MOVING_STATUS.CPUS_BEASTS,
+];
 
 /**
  * @description Чтобы подставлять в конструктор класса Beast.
