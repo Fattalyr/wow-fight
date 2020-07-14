@@ -8,7 +8,7 @@ export const battleFeatureKey = 'battle';
 
 export interface ITurnActivity {
     craftedSpells?: CraftedSpells;
-    calledBeasts?: string[]; // UUID of BeastClass
+    calledBeasts?: string[]; // UUID of IBeast
     characterAttacked: IPossibleAttack | undefined;
     beastsAttacked?: IPossibleAttack[];
     critFired: boolean | null;

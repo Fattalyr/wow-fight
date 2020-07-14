@@ -1,9 +1,8 @@
 import { Component, OnInit, Input, ChangeDetectionStrategy, forwardRef, ChangeDetectorRef, } from '@angular/core';
 import { FormControl, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { IAvailableAttackVectors, IPossibleAttack } from '../models';
-import { CharacterClass } from '../classes/character.class';
-import { BeastClass } from '../classes/beast.class';
 import { AttackService } from '../services/attack.service';
+import { IBeast, ICharacter } from '../classes/characters';
 
 
 @Component({
@@ -35,10 +34,10 @@ export class AttackComponent implements OnInit {
     private _attackVectors: IAvailableAttackVectors;
 
     @Input()
-    private allEntities: (CharacterClass | BeastClass)[];
+    private allEntities: (ICharacter | IBeast)[];
 
     @Input()
-    public playerCharacter: CharacterClass;
+    public playerCharacter: ICharacter;
 
     public listOfPossibleAttacks: IPossibleAttack[];
 

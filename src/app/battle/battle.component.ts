@@ -22,8 +22,6 @@ import {
     IAttacks,
     IAvailableAttackVectors,
     IBeastsData,
-    ICharacterMutableCopy,
-    IBeastMutableCopy,
     IPossibleAttack,
     ISpell,
     Party,
@@ -31,11 +29,10 @@ import {
     Vector,
 } from '../models';
 import { ITurn, ITurnActivity } from '../store/battle/battle.reducer';
-import { BeastClass } from '../classes/beast.class';
 import { AttackService } from '../services/attack.service';
 import { addBeast, updateCPUCharacter, updatePlayerCharacter } from '../store/settings/settings.actions';
 import { turnCompleted } from '../store/battle/battle.actions';
-import { CharacterClass } from '../classes/character.class';
+import { createBeast, IBeast, ICharacter } from '../classes/characters';
 
 
 @Component({
@@ -110,17 +107,17 @@ export class BattleComponent implements OnInit, OnDestroy {
         playerAttacksControl: new FormControl(),
     });
 
-    private playerCharacter: ICharacterMutableCopy;
+    private playerCharacter: ICharacter;
 
-    private cpuCharacter: ICharacterMutableCopy;
+    private cpuCharacter: ICharacter;
 
-    private playerBeasts: IBeastMutableCopy[] = [];
+    private playerBeasts: IBeast[] = [];
 
-    private cpuBeasts: IBeastMutableCopy[] = [];
+    private cpuBeasts: IBeast[] = [];
 
-    private immutablePlayerCharacter: CharacterClass | ICharacterMutableCopy;
+    private immutablePlayerCharacter: ICharacter;
 
-    private immutableCpuCharacter: CharacterClass | ICharacterMutableCopy;
+    private immutableCpuCharacter: ICharacter;
 
     constructor(
         private store: Store,
@@ -168,8 +165,8 @@ export class BattleComponent implements OnInit, OnDestroy {
                     return {
                         playerParty: [ ...deepUnfreeze(playerBeasts), { ...deepUnfreeze(playerCharacter) } ],
                         cpuParty: [ ...deepUnfreeze(cpuBeasts), { ...deepUnfreeze(cpuCharacter) } ],
-                        playerCharacter: { ...deepUnfreeze(playerCharacter) } as ICharacterMutableCopy,
-                        cpuCharacter: { ...deepUnfreeze(cpuCharacter) } as ICharacterMutableCopy,
+                        playerCharacter: { ...deepUnfreeze(playerCharacter) } as ICharacter,
+                        cpuCharacter: { ...deepUnfreeze(cpuCharacter) } as ICharacter,
                         playerBeasts: [ ...deepUnfreeze(playerBeasts) ],
                         cpuBeasts: [ ...deepUnfreeze(cpuBeasts) ],
                     };
@@ -291,6 +288,8 @@ export class BattleComponent implements OnInit, OnDestroy {
                 if (!isEqual(cpuCharacter, this.immutableCpuCharacter)) {
                     this.store.dispatch(updateCPUCharacter({ cpuCharacter }));
                 }
+                this.playerAttacks = null;
+                this.cpuAttacks = null;
             });
     }
 
@@ -300,7 +299,7 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     private calculateAttackVectors(
         turns: ITurn[],
-        character: ICharacterMutableCopy,
+        character: ICharacter,
         availableEnemies: Party
     ): IAvailableAttackVectors {
         const len = turns.length;
@@ -361,7 +360,7 @@ export class BattleComponent implements OnInit, OnDestroy {
         this.cpuAttacks = possibleAttacks[random];
     }
 
-    private calculateActivity(character: ICharacterMutableCopy, attack: IPossibleAttack): ITurnActivity {
+    private calculateActivity(character: ICharacter, attack: IPossibleAttack): ITurnActivity {
         const target = this.allEntities.find(entity => entity.id === attack.target);
         const hit = attack.hit;
         const turnActivity = deepUnfreeze({
@@ -392,7 +391,7 @@ export class BattleComponent implements OnInit, OnDestroy {
     }
 
     private callSpellBeast(spell: ISpell, party: string): IBeastsData {
-        const newBeast = new BeastClass(spell.calledBeast, party);
+        const newBeast = createBeast(spell.calledBeast.type, party);
         this.store.dispatch(addBeast({ beast: newBeast }));
         return { ...spell.calledBeast, id: newBeast.id };
     }

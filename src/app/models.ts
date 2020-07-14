@@ -1,5 +1,4 @@
-import { CharacterClass } from './classes/character.class';
-import { BeastClass } from './classes/beast.class';
+import { IBeast, ICharacter } from './classes/characters';
 
 
 export enum NAMES {
@@ -123,11 +122,11 @@ export interface IAttacks {
     playerAttackVector: IPossibleAttack;
 }
 
-export type Party = (CharacterClass | BeastClass | ICharacterMutableCopy | IBeastMutableCopy)[];
+export type Party = (ICharacter | IBeast)[];
 
 export interface ITUpdatedParties {
-    updatedPlayerCharacter: ICharacterMutableCopy;
-    updatedCpuCharacter: ICharacterMutableCopy;
+    updatedPlayerCharacter: ICharacter;
+    updatedCpuCharacter: ICharacter;
     updatedPlayerParty: Party;
     updatedCpuParty: Party;
 }
@@ -140,8 +139,8 @@ export enum Vector {
 }
 
 export interface ISpellAttackResult {
-    assaulter: ICharacterMutableCopy;
-    defending: ICharacterMutableCopy;
+    assaulter: ICharacter;
+    defending: ICharacter;
     assaulterParty: Party;
     defendingParty: Party;
 }

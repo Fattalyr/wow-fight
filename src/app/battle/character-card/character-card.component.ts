@@ -1,6 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { BeastClass } from '../../classes/beast.class';
-import { CharacterClass } from '../../classes/character.class';
+import { IBeast, ICharacter } from '../../classes/characters';
 
 @Component({
     selector: 'app-character-card',
@@ -9,7 +8,7 @@ import { CharacterClass } from '../../classes/character.class';
 })
 export class CharacterCardComponent implements OnInit {
     @Input()
-    character: CharacterClass | BeastClass;
+    character: ICharacter | IBeast;
 
     @Input()
     party: 'Вы' | 'CPU';

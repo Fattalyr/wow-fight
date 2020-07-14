@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
 import {
+    SPELLS,
     IAvailableAttackVectors,
-    ICharacterMutableCopy,
     IPossibleAttack,
     ISpellAttackResult,
     ITUpdatedParties,
-    Party, SPELLS,
+    Party,
     Vector,
 } from '../models';
 import { ITurn, ITurnActivity } from '../store/battle/battle.reducer';
-import { BeastClass } from '../classes/beast.class';
+import { createBeast, ICharacter } from '../classes/characters';
 
 @Injectable({
     providedIn: 'root'
@@ -33,8 +33,8 @@ export class AttackService {
     }
 
     private castSpell(
-        assaulter: ICharacterMutableCopy,
-        defending: ICharacterMutableCopy,
+        assaulter: ICharacter,
+        defending: ICharacter,
         assaulterParty: Party,
         defendingParty: Party,
         activity: ITurnActivity
@@ -47,7 +47,7 @@ export class AttackService {
                     ? assaulter.inheritedData.hp
                     : assaulter.currentData.hp + spell.HPDelta;
             } else if (spell.spellName === SPELLS.REBIRTH) {
-                const beast = new BeastClass(spell.calledBeast, assaulter.party);
+                const beast = createBeast(spell.calledBeast.type, assaulter.party);
                 assaulterParty.push(beast);
             }
         } else if (spell.target === defending.id) {
@@ -57,7 +57,7 @@ export class AttackService {
                     ? 0
                     : defending.currentData.hp - spell.HPDelta;
                 if (defending.currentData.hp === 0) {
-                    defending.isDead = true;
+                    defending.isAlive = false;
                 }
             }
         }
@@ -70,10 +70,10 @@ export class AttackService {
     }
 
     private applyHit(
-        defending: ICharacterMutableCopy,
-        assaulter: ICharacterMutableCopy,
+        defending: ICharacter,
+        assaulter: ICharacter,
         assaulterActivity: ITurnActivity
-    ): ICharacterMutableCopy {
+    ): ICharacter {
         const critFired = assaulterActivity.critFired;
         const cpuCharactersUpdatedHp = defending.currentData.hp - assaulter.currentData.dps * (critFired ? 1.5 : 1);
         const HPDiffIsPositive = cpuCharactersUpdatedHp > 0;
@@ -81,15 +81,15 @@ export class AttackService {
             defending.currentData.hp = cpuCharactersUpdatedHp;
         } else {
             defending.currentData.hp = 0;
-            defending.isDead = true;
+            defending.isAlive = false;
         }
         return defending;
     }
 
     public applyAttack(
         turn: ITurn,
-        playerCharacter: ICharacterMutableCopy,
-        cpuCharacter: ICharacterMutableCopy,
+        playerCharacter: ICharacter,
+        cpuCharacter: ICharacter,
         playerParty: Party,
         cpuParty: Party,
         vector: Vector

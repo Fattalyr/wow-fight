@@ -2,10 +2,9 @@ import { createReducer, on, Action } from '@ngrx/store';
 import { UUID } from 'angular2-uuid';
 import deepUnfreeze from 'deep-unfreeze';
 import * as SettingsActions from './settings.actions';
-import { CharacterClass } from '../../classes/character.class';
-import { BeastClass } from '../../classes/beast.class';
-import { IBeastMutableCopy, ICharacterMutableCopy, NAMES } from '../../models';
+import { NAMES } from '../../models';
 import { CHARACTERS_START_DATA } from '../../constants/constants';
+import { createCharacter, IBeast, ICharacter } from '../../classes/characters';
 
 
 const playerPartyId = UUID.UUID();
@@ -14,10 +13,10 @@ const cpuPartyId = UUID.UUID();
 export interface ISettingsState {
     playerPartyId: string;
     cpuPartyId: string;
-    playerCharacter: CharacterClass | ICharacterMutableCopy;
-    playerBeasts: Array<BeastClass | IBeastMutableCopy | undefined>;
-    cpuCharacter: CharacterClass | ICharacterMutableCopy;
-    cpuBeasts: Array<BeastClass | IBeastMutableCopy | undefined>;
+    playerCharacter: ICharacter;
+    playerBeasts: Array<IBeast | undefined>;
+    cpuCharacter: ICharacter;
+    cpuBeasts: Array<IBeast | undefined>;
 }
 
 export const settingsFeatureKey = 'settings';
@@ -29,9 +28,9 @@ const cpuCharacterName = randomNumber >= 0.5 ? NAMES.NERZHUL : NAMES.GULDAN;
 const initialState: ISettingsState = {
     playerPartyId,
     cpuPartyId,
-    playerCharacter: new CharacterClass(CHARACTERS_START_DATA[ playerCharacterName ], playerPartyId, randomNumber < 0.5 ? 'nerzhul' : 'guldan'),
+    playerCharacter: createCharacter(playerCharacterName, playerPartyId, UUID.UUID()),
     playerBeasts: [],
-    cpuCharacter: new CharacterClass(CHARACTERS_START_DATA[ cpuCharacterName ], cpuPartyId, randomNumber >= 0.5 ? 'nerzhul' : 'guldan'),
+    cpuCharacter: createCharacter(cpuCharacterName, cpuPartyId, UUID.UUID()),
     cpuBeasts: [],
 };
 
@@ -40,7 +39,7 @@ export interface IFoundBeast {
     beastIndex: number;
 }
 
-function findBeastInState(state: ISettingsState, beast: BeastClass | IBeastMutableCopy): IFoundBeast {
+function findBeastInState(state: ISettingsState, beast: IBeast): IFoundBeast {
     const playersBeastIndex = state.playerBeasts.findIndex(playerBeast => playerBeast.id === beast.id);
     if (playersBeastIndex > -1) {
         return { beastOwner: 'playerBeasts', beastIndex: playersBeastIndex };
@@ -72,16 +71,8 @@ const settingsReducer = createReducer(
     }),
     on(SettingsActions.toggleCharacters, (state: ISettingsState) => {
         const newState = deepUnfreeze(state);
-        const newPlayerCharacter = new CharacterClass(
-            CHARACTERS_START_DATA[ newState.cpuCharacter.self ],
-            playerPartyId,
-            newState.playerCharacter.slug === 'nerzhul' ? 'guldan' : 'nerzhul'
-        );
-        const newCPUCharacter = new CharacterClass(
-            CHARACTERS_START_DATA[ newState.playerCharacter.self ],
-            cpuPartyId,
-            newState.cpuCharacter.slug === 'nerzhul' ? 'guldan' : 'nerzhul'
-        );
+        const newPlayerCharacter = createCharacter(CHARACTERS_START_DATA[ newState.cpuCharacter.self ].self, playerPartyId, UUID.UUID());
+        const newCPUCharacter = createCharacter(CHARACTERS_START_DATA[ newState.playerCharacter.self ].self, cpuPartyId, UUID.UUID());
         return { ...newState, playerCharacter: newPlayerCharacter, cpuCharacter: newCPUCharacter };
     })
 );
