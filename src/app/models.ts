@@ -144,3 +144,11 @@ export interface ISpellAttackResult {
     assaulterParty: Party;
     defendingParty: Party;
 }
+
+export enum MOVING_QUERY {
+    WAITING= 'waiting',
+    PLAYER = 'player',
+    CPU = 'CPU',
+    PLAYERS_BEASTS = 'player\'s bests',
+    CPUS_BEASTS = 'cpu\'s bests',
+}

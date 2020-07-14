@@ -31,7 +31,7 @@ import {
 import { ITurn, ITurnActivity } from '../store/battle/battle.reducer';
 import { AttackService } from '../services/attack.service';
 import { addBeast, updateCPUCharacter, updatePlayerCharacter } from '../store/settings/settings.actions';
-import { turnCompleted } from '../store/battle/battle.actions';
+import { playerPassedTurn, turnCompleted } from '../store/battle/battle.actions';
 import { createBeast, IBeast, ICharacter } from '../classes/characters';
 
 
@@ -397,14 +397,15 @@ export class BattleComponent implements OnInit, OnDestroy {
     }
 
     public turnRound(): void {
-        this.turnIsCalculating = true;
-        this.defineCPUAttackVector();
-
-        this.newTurnInitSubject$.next(
-            {
-                cpuAttackVector: this.cpuAttacks,
-                playerAttackVector: this.playerAttacks,
-            }
-        );
+        // this.turnIsCalculating = true;
+        // this.defineCPUAttackVector();
+        //
+        // this.newTurnInitSubject$.next(
+        //     {
+        //         cpuAttackVector: this.cpuAttacks,
+        //         playerAttackVector: this.playerAttacks,
+        //     }
+        // );
+        this.store.dispatch(playerPassedTurn());
     }
 }

@@ -150,4 +150,20 @@ export class AttackService {
             }
         }
     }
+
+    public playerIsMoving(): void {
+
+    }
+
+    public CPUIsMoving(): void {
+
+    }
+
+    public playersBeastsAreMoving(): void {
+
+    }
+
+    public CPUsBeastsAreMoving(): void {
+
+    }
 }

@@ -7,7 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { StartComponent } from './start/start.component';
-import { AppStateModule } from './store/app-state.module';
+import { AppStoreModule } from './store/app-store.module';
 import { StoreModule } from '@ngrx/store';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { environment } from '../environments/environment';
@@ -35,7 +35,7 @@ import { RoundPipe } from './pipes/round.pipe';
     StoreModule.forRoot({}, {}),
     StoreDevtoolsModule.instrument({ maxAge: 50, logOnly: environment.production }),
 
-    AppStateModule,
+    AppStoreModule,
   ],
   providers: [],
   bootstrap: [AppComponent]
