@@ -1,5 +1,5 @@
 <div class="attack-outer">
-    <div *ngIf="listOfPossibleAttacks.length">
+    <div *ngIf="listOfPossibleAttacks && listOfPossibleAttacks.length">
         <mat-radio-group [formControl]="attacksControl" aria-label="Варианты атаки">
             <mat-radio-button
                 *ngFor="let attackOption of listOfPossibleAttacks"

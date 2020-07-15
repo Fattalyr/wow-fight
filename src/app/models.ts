@@ -84,39 +84,6 @@ export interface IMultipliers {
     stamina: ICalculatedParams;
 }
 
-export interface ICharacterMutableCopy {
-    multipliers: IMultipliers;
-    inheritedData: ICharacterData;
-    currentData: ICharacterData;
-    calculateBasicParams: (characterData: ICharacterData) => ICalculatedParams;
-    updateCalculatedDataByCurrentData: () => void;
-    self: BEASTS | NAMES;
-    id: string;
-    party: string;
-    slug: string;
-    spellbound: CraftedSpells;
-    castedSpells: CraftedSpells;
-    _isAlive: boolean;
-    isAlive: boolean;
-    _isDead: boolean;
-    isDead: boolean;
-}
-
-export interface IBeastMutableCopy {
-    inheritedData: IBeastsData;
-    currentData: IBeastsData;
-    self: BEASTS | NAMES;
-    id: string;
-    party: string;
-    slug: string;
-    spellbound: CraftedSpells;
-    castedSpells: CraftedSpells;
-    _isAlive: boolean;
-    isAlive: boolean;
-    _isDead: boolean;
-    isDead: boolean;
-}
-
 export interface IAttacks {
     cpuAttackVector: IPossibleAttack;
     playerAttackVector: IPossibleAttack;
@@ -138,7 +105,7 @@ export enum Vector {
     PLAYERS_BEAST_VS_CPUS_PARTY = 'player\'s beast -> cpu\'s party',
 }
 
-export interface ISpellAttackResult {
+export interface IAttackResult {
     assaulter: ICharacter;
     defending: ICharacter;
     assaulterParty: Party;
@@ -149,6 +116,6 @@ export enum MOVING_STATUS {
     WAITING = 'waiting',
     PLAYER = 'player',
     CPU = 'CPU',
-    PLAYERS_BEASTS = 'player\'s bests',
-    CPUS_BEASTS = 'cpu\'s bests',
+    PLAYERS_BEASTS = 'player\'s beasts',
+    CPUS_BEASTS = 'cpu\'s beasts',
 }

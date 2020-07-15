@@ -1,7 +1,9 @@
 import { Action, createReducer, on } from '@ngrx/store';
 import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
 import { deleteBattle, nextMove, playerPassedTurn, turnCompleted } from './battle.actions';
-import { IPossibleAttack, CraftedSpells, MOVING_STATUS } from '../../models';
+import { IPossibleAttack, CraftedSpells, MOVING_STATUS, ISpell } from '../../models';
+import { ATTACK_METHOD } from '../../constants/constants';
+import { IBeast } from '../../classes/characters';
 
 
 export const battleFeatureKey = 'battle';
@@ -14,10 +16,23 @@ export interface ITurnActivity {
     critFired: boolean | null;
 }
 
+export interface IActivity {
+    assaulterId: string; // Id героя или призванной твари.
+    targetId: string; // Id цели.
+    method: ATTACK_METHOD;
+    critFired?: boolean;
+    spell?: ISpell;
+    damage?: number;
+    calledBeasts?: IBeast[];
+}
+
 export interface ITurn {
     roundNumber: number;
     playersActivities: ITurnActivity;
     cpusActivities: ITurnActivity;
+
+    playerPartyActivities: IActivity[];
+    cpuPartyActivities: IActivity[];
 }
 
 export interface ITurnActivitiesState extends EntityState<ITurn> {

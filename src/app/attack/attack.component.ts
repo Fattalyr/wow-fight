@@ -20,7 +20,9 @@ export class AttackComponent implements OnInit {
     @Input('attackVectors')
     set attackVectors(value: IAvailableAttackVectors) {
         this._attackVectors = value;
-        this.listOfPossibleAttacks = this.attackService.calculatePossibleAttacks(value);
+        if (value) {
+            this.listOfPossibleAttacks = this.attackService.calculatePossibleAttacks(value);
+        }
     }
     get attackVectors(): IAvailableAttackVectors {
         return this._attackVectors;
@@ -57,7 +59,7 @@ export class AttackComponent implements OnInit {
     }
 
     public getEnemyName(target: string): string {
-        const enemy = this.allEntities.find(entity => entity.id === target);
+        const enemy = this.attackService.allEntities.find(entity => entity.id === target);
         if (!enemy) {
             throw Error('Не найдена цель заклинания.');
         }

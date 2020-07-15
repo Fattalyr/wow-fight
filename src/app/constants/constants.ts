@@ -9,6 +9,12 @@ export const MOVING_QUERY = [
     MOVING_STATUS.CPUS_BEASTS,
 ];
 
+export enum ATTACK_METHOD {
+    HIT = 'hit',
+    SPELL = 'spell',
+    SKIP = 'skip',
+}
+
 /**
  * @description Чтобы подставлять в конструктор класса Beast.
  */

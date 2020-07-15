@@ -51,8 +51,14 @@ function findBeastInState(state: ISettingsState, beast: IBeast): IFoundBeast {
 
 const settingsReducer = createReducer(
     initialState,
-    on(SettingsActions.updatePlayerCharacter, (state: ISettingsState, { playerCharacter }) => ({ ...state, playerCharacter })),
-    on(SettingsActions.updateCPUCharacter, (state: ISettingsState, { cpuCharacter }) => ({ ...state, cpuCharacter })),
+    on(SettingsActions.updatePlayerCharacter, (state: ISettingsState, { playerCharacter }) => {
+        console.log('update playerCharacter', { ...playerCharacter });
+        return { ...state, playerCharacter };
+    }),
+    on(SettingsActions.updateCPUCharacter, (state: ISettingsState, { cpuCharacter }) => {
+        console.log('update cpuCharacter', { ...cpuCharacter });
+        return { ...state, cpuCharacter };
+    }),
     on(SettingsActions.addBeast, (state: ISettingsState, { beast }) => {
         const newState = deepUnfreeze(state);
         if (newState.playerPartyId === beast.party) {
@@ -60,6 +66,7 @@ const settingsReducer = createReducer(
         } else {
             newState.cpuBeasts.push(beast);
         }
+        console.log('add beast', { ...beast });
         return newState;
     }),
     on(SettingsActions.updateBeast, (state: ISettingsState, { beast }) => {

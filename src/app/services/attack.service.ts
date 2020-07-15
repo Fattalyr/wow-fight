@@ -2,15 +2,20 @@ import { Injectable } from '@angular/core';
 import { select, Store } from '@ngrx/store';
 import deepUnfreeze from 'deep-unfreeze';
 import {
-    SPELLS,
+    CraftedSpells,
+    IAttackResult,
+    IAttacks,
     IAvailableAttackVectors,
+    IBeastsData,
     IPossibleAttack,
-    ISpellAttackResult,
+    ISpell,
     ITUpdatedParties,
     Party,
-    Vector, CraftedSpells, ISpell, IAttacks, SPELL_TARGET, IBeastsData,
+    SPELL_TARGET,
+    SPELLS,
+    Vector,
 } from '../models';
-import { ITurn, ITurnActivity } from '../store/battle/battle.reducer';
+import { IActivity, ITurn, ITurnActivity } from '../store/battle/battle.reducer';
 import { createBeast, IBeast, ICharacter } from '../classes/characters';
 import { combineLatest, Subject } from 'rxjs';
 import {
@@ -22,6 +27,7 @@ import {
 import { map, switchMap, tap } from 'rxjs/operators';
 import { selectTurns } from '../store/battle/battle.selectors';
 import { addBeast, updateCPUCharacter, updatePlayerCharacter } from '../store/settings/settings.actions';
+import { ATTACK_METHOD } from '../constants/constants';
 
 
 @Injectable({
@@ -32,7 +38,7 @@ export class AttackService {
     private cpuCharacter: ICharacter;
     private playersBeasts: IBeast[];
     private cpusBeasts: IBeast[];
-    private allEntities: Party = [];
+    public allEntities: Party = [];
     private playerParty: Party = [];
     private cpuParty: Party = [];
     private turns: ITurn[] = [];
@@ -43,9 +49,6 @@ export class AttackService {
     public playerAttacks: IPossibleAttack;
     public cpuAttacks: IPossibleAttack;
     public roundNumber: number;
-
-    private newTurnInitSubject$ = new Subject<IAttacks>();
-    public newTurnInit$ = this.newTurnInitSubject$.asObservable();
 
     constructor(private store: Store) {}
 
@@ -69,6 +72,7 @@ export class AttackService {
                 this.playerParty = [ this.playerCharacter, ...this.playersBeasts ];
                 this.cpuParty = [ this.cpuCharacter, ...this.cpusBeasts ];
                 this.allEntities = [ ...this.playerParty, ...this.cpuParty ];
+                this.playersAvailableAttackVectors = this.calculateAttackVectors(this.turns, this.playerCharacter, this.cpuParty);
                 return {
                     playerCharacter: this.playerCharacter,
                     cpuCharacter: this.cpuCharacter,
@@ -81,7 +85,6 @@ export class AttackService {
                     map(turns => {
                         this.roundNumber = turns.length + 1;
                         this.turns = turns;
-                        this.playersAvailableAttackVectors = this.calculateAttackVectors(turns, playerCharacter, cpuParty);
                         this.cpusAvailableAttackVectors = this.calculateAttackVectors(turns, cpuCharacter, playerParty);
                         return {
                             turns,
@@ -95,6 +98,10 @@ export class AttackService {
             ),
         );
 
+    public setPlayerAttack(value: IPossibleAttack): void {
+        this.playerAttacks = value;
+    }
+
     private reduceSpells(craftedSpells: CraftedSpells): CraftedSpells {
         const reducedSpells: CraftedSpells = [];
         if (craftedSpells.length > 0) {
@@ -107,40 +114,37 @@ export class AttackService {
         return reducedSpells;
     }
 
-    private calculateSpellDamage(spell: ISpell): number {
-        return spell.HPDelta;
-    }
-
-    private callSpellBeast(spell: ISpell, party: string): IBeastsData {
-        const newBeast = createBeast(spell.calledBeast.type, party);
-        this.store.dispatch(addBeast({ beast: newBeast }));
-        return { ...spell.calledBeast, id: newBeast.id };
-    }
-
-    private calculateActivity(character: ICharacter, attack: IPossibleAttack): ITurnActivity {
+    private realizeAttack(character: ICharacter | IBeast, attack: IPossibleAttack): IActivity {
         const target = this.allEntities.find(entity => entity.id === attack.target);
-        const hit = attack.hit;
-        const turnActivity = deepUnfreeze({
-            craftedSpells: this.reduceSpells(character.castedSpells),
-            characterAttacked: { ...attack, damage: 0 },
-            critFired: hit ? Math.random() <= character.currentData.crit : null,
-        });
-        if (!target) {
-            throw new Error('Не найдена цель атаки.');
+        const method = attack.hit
+            ? ATTACK_METHOD.HIT
+            : (attack.spell
+                ? ATTACK_METHOD.SPELL
+                : ATTACK_METHOD.SKIP);
+        let critFired: boolean = null;
+
+        if (method === ATTACK_METHOD.HIT && 'crit' in character.currentData) {
+            critFired = Math.random() <= character.currentData.crit;
         }
-        if (hit) {
-            turnActivity.characterAttacked.damage = character.currentData.dps * (turnActivity.critFired ? 1.5 : 1);
-        } else {
-            if (attack?.spell?.HPDelta) {
-                turnActivity.characterAttacked.damage = this.calculateSpellDamage(attack.spell);
-                if (attack.spell.target === SPELL_TARGET.SELF) {
-                    turnActivity.characterAttacked.target = character.id;
-                }
-            } else if (attack?.spell?.callBeast) {
-                turnActivity.characterAttacked.spell.calledBeast = this.callSpellBeast(attack.spell, character.party);
-            }
+
+        const resultActivity: IActivity = {
+            assaulterId: character.id,
+            targetId: target.id,
+            method,
+            critFired,
+        };
+
+        if (method === ATTACK_METHOD.HIT) {
+            resultActivity.damage = character.currentData.dps * (critFired ? 1.5 : 1);
+        } else if (method === ATTACK_METHOD.SPELL && attack?.spell?.HPDelta) {
+            resultActivity.spell = attack.spell;
+            resultActivity.damage = attack.spell.HPDelta;
+        } else if (method === ATTACK_METHOD.SPELL && attack?.spell?.callBeast) {
+            resultActivity.spell = attack.spell;
+            resultActivity.calledBeasts = [ createBeast(attack.spell.calledBeast.type, character.party) ];
         }
-        return turnActivity;
+
+        return resultActivity;
     }
 
     private calculateAttackVectors(
@@ -201,121 +205,50 @@ export class AttackService {
         return availableAttacks;
     }
 
-    private castSpell(
-        assaulter: ICharacter,
-        defending: ICharacter,
-        assaulterParty: Party,
-        defendingParty: Party,
-        activity: ITurnActivity
-    ): ISpellAttackResult {
-        const spell = activity.characterAttacked.spell;
-        assaulter.castedSpells[spell.spellName] = spell.coolDown;
-        if (spell.target === assaulter.id) {
-            if (spell.spellName === SPELLS.ANCESTRAL_SPIRIT) {
-                assaulter.currentData.hp = (assaulter.currentData.hp + spell.HPDelta) > assaulter.inheritedData.hp
-                    ? assaulter.inheritedData.hp
-                    : assaulter.currentData.hp + spell.HPDelta;
-            } else if (spell.spellName === SPELLS.REBIRTH) {
-                const beast = createBeast(spell.calledBeast.type, assaulter.party);
-                assaulterParty.push(beast);
-            }
-        } else if (spell.target === defending.id) {
-            defending.spellbound[spell.spellName] = spell.duration;
-            if (spell.spellName === SPELLS.FILTH) {
-                defending.currentData.hp = (defending.currentData.hp - spell.HPDelta) < 0
-                    ? 0
-                    : defending.currentData.hp - spell.HPDelta;
-                if (defending.currentData.hp === 0) {
+    public applyActivity({
+        assaulterId,
+        targetId,
+        method,
+        spell,
+        damage,
+        critFired,
+        calledBeasts
+    }: IActivity): void {
+        const all = this.allEntities;
+        const assaulter = all.find(entity => entity.id === assaulterId);
+        const defending = all.find(entity => entity.id === targetId);
+
+        if (method === ATTACK_METHOD.HIT) {
+            defending.currentData.hp -= damage;
+        } else if (method === ATTACK_METHOD.SPELL) {
+            assaulter.castedSpells[spell.spellName] = spell.coolDown;
+            defending.castedSpells[spell.spellName] = spell.duration;
+
+            if (spell.reduceHP) {
+                const diff = defending.currentData.hp - damage;
+                const resultIsHigherZero = diff >= 0;
+                defending.currentData.hp = resultIsHigherZero
+                    ? diff
+                    : 0;
+                if (!resultIsHigherZero) {
                     defending.isAlive = false;
                 }
+            } else if (spell.addHP) {
+                const diff = defending.currentData.hp + damage;
+                const resultIsLowerMax = diff <= defending.inheritedData.hp;
+                defending.currentData.hp = resultIsLowerMax
+                    ? diff
+                    : defending.inheritedData.hp;
             }
-        }
-        return {
-            assaulter,
-            defending,
-            assaulterParty,
-            defendingParty,
-        };
-    }
 
-    private applyHit(
-        defending: ICharacter,
-        assaulter: ICharacter,
-        assaulterActivity: ITurnActivity
-    ): ICharacter {
-        const critFired = assaulterActivity.critFired;
-        const cpuCharactersUpdatedHp = defending.currentData.hp - assaulter.currentData.dps * (critFired ? 1.5 : 1);
-        const HPDiffIsPositive = cpuCharactersUpdatedHp > 0;
-        if (HPDiffIsPositive) {
-            defending.currentData.hp = cpuCharactersUpdatedHp;
-        } else {
-            defending.currentData.hp = 0;
-            defending.isAlive = false;
-        }
-        return defending;
-    }
-
-    public applyAttack(
-        turn: ITurn,
-        playerCharacter: ICharacter,
-        cpuCharacter: ICharacter,
-        playerParty: Party,
-        cpuParty: Party,
-        vector: Vector
-    ): ITUpdatedParties {
-        if (vector === Vector.PLAYER_VS_CPU) {
-            const activity = turn.playersActivities;
-
-            if (activity.characterAttacked.hit) {
-                cpuCharacter = this.applyHit(cpuCharacter, playerCharacter, activity);
-
-                return {
-                    updatedPlayerCharacter: playerCharacter,
-                    updatedCpuCharacter: cpuCharacter,
-                    updatedPlayerParty: playerParty,
-                    updatedCpuParty: cpuParty,
-                };
-            } else if (activity.characterAttacked.spell) {
-                const {
-                    assaulter,
-                    defending,
-                    assaulterParty,
-                    defendingParty
-                } = this.castSpell(playerCharacter, cpuCharacter, playerParty, cpuParty, activity);
-
-                return {
-                    updatedPlayerCharacter: assaulter,
-                    updatedCpuCharacter: defending,
-                    updatedPlayerParty: assaulterParty,
-                    updatedCpuParty: defendingParty,
-                };
-            }
-        } else if (vector === Vector.CPU_VS_PLAYER) {
-            const activity = turn.cpusActivities;
-
-            if (activity.characterAttacked.hit) {
-                playerCharacter = this.applyHit(playerCharacter, cpuCharacter, activity);
-
-                return {
-                    updatedPlayerCharacter: playerCharacter,
-                    updatedCpuCharacter: cpuCharacter,
-                    updatedPlayerParty: playerParty,
-                    updatedCpuParty: cpuParty,
-                };
-            } else if (activity.characterAttacked.spell) {
-                const {
-                    assaulter,
-                    defending,
-                    assaulterParty,
-                    defendingParty
-                } = this.castSpell(cpuCharacter, playerCharacter, cpuParty, playerParty, turn.cpusActivities);
-
-                return {
-                    updatedPlayerCharacter: defending,
-                    updatedCpuCharacter: assaulter,
-                    updatedPlayerParty: defendingParty,
-                    updatedCpuParty: assaulterParty,
-                };
+            if (spell.calledBeast) {
+                for (const beast of calledBeasts) {
+                    if (beast.party === this.playerCharacter.party) {
+                        this.playersBeasts = [ ...this.playersBeasts, beast ];
+                    } else {
+                        this.cpusBeasts = [ ...this.cpusBeasts, beast ];
+                    }
+                }
             }
         }
     }
@@ -340,7 +273,9 @@ export class AttackService {
             cpusActivities: {
                 characterAttacked: undefined,
                 critFired: null,
-            }
+            },
+            playerPartyActivities: [],
+            cpuPartyActivities: [],
         };
     }
 
@@ -350,26 +285,19 @@ export class AttackService {
         console.log(' ');
         console.log('Player is moving');
 
-        console.log('this.turn', this);
+        const playerActivity = this.realizeAttack(this.playerCharacter, this.playerAttacks);
+        console.log('playerActivity', playerActivity);
 
-        this.turn.playersActivities = this.calculateActivity(this.playerCharacter, this.playerAttacks);
+        this.turn.playerPartyActivities.push(playerActivity);
+        this.applyActivity(playerActivity);
 
-        const {
-            updatedPlayerCharacter,
-            updatedCpuCharacter,
-            updatedPlayerParty,
-            updatedCpuParty
-        } = this.applyAttack(
-            this.turn,
-            this.playerCharacter,
-            this.cpuCharacter,
-            this.playerParty,
-            this.cpuParty,
-            Vector.PLAYER_VS_CPU
-        );
-
-        this.store.dispatch(updatePlayerCharacter({ playerCharacter: updatedPlayerCharacter }));
-        this.store.dispatch(updateCPUCharacter({ cpuCharacter: updatedCpuCharacter }));
+        this.store.dispatch(updatePlayerCharacter({ playerCharacter: this.playerCharacter }));
+        this.store.dispatch(updateCPUCharacter({ cpuCharacter: this.cpuCharacter }));
+        if (playerActivity.calledBeasts && playerActivity.calledBeasts.length) {
+            for (const beast of playerActivity.calledBeasts) {
+                this.store.dispatch(addBeast({ beast }));
+            }
+        }
     }
 
     public CPUIsMoving(): void {

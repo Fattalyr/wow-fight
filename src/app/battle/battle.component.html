@@ -12,7 +12,7 @@
                         <form [formGroup]="form">
                             <app-attack
                                 formControlName="playerAttacksControl"
-                                [attackVectors]="playersAvailableAttackVectors"
+                                [attackVectors]="attackService.playersAvailableAttackVectors"
                                 [allEntities]="allEntities"
                                 [playerCharacter]="playerCharacter$ | async"
                             ></app-attack>
@@ -45,7 +45,7 @@
                 mat-raised-button
                 color="accent"
                 (click)="turnRound()"
-                [disabled]="!playerAttacks"
+                [disabled]="!playerAttack"
             >
                 Сделать ход
             </button>
