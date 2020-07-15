@@ -125,6 +125,13 @@ export class BattleComponent implements OnInit, OnDestroy {
     ) { }
 
     ngOnInit(): void {
+        this.attackService
+            .characterUpdatesFlow$
+            .pipe(
+                takeUntil(this.destroy$),
+            )
+            .subscribe();
+
         this.total$
             .pipe(
                 map((total: number) => {
@@ -214,7 +221,11 @@ export class BattleComponent implements OnInit, OnDestroy {
             .get('playerAttacksControl')
             .valueChanges
             .pipe(
-                tap(({ value }) => this.playerAttacks = value),
+                map(({ value }) => {
+                    this.playerAttacks = value;
+                    this.attackService.playerAttacks = value;
+                    return value;
+                }),
                 takeUntil(this.destroy$),
             )
             .subscribe();
