@@ -3,19 +3,13 @@ import { select, Store } from '@ngrx/store';
 import deepUnfreeze from 'deep-unfreeze';
 import {
     CraftedSpells,
-    IAttackResult,
-    IAttacks,
     IAvailableAttackVectors,
-    IBeastsData,
     IPossibleAttack,
     ISpell,
-    ITUpdatedParties,
     Party,
-    SPELL_TARGET,
     SPELLS,
-    Vector,
 } from '../models';
-import { IActivity, ITurn, ITurnActivity } from '../store/battle/battle.reducer';
+import { IActivity, ITurn, } from '../store/battle/battle.reducer';
 import { createBeast, IBeast, ICharacter } from '../classes/characters';
 import { combineLatest, Subject } from 'rxjs';
 import {
@@ -26,7 +20,12 @@ import {
 } from '../store/settings/settings.selectors';
 import { map, switchMap, tap } from 'rxjs/operators';
 import { selectTurns } from '../store/battle/battle.selectors';
-import { addBeast, updateCPUCharacter, updatePlayerCharacter } from '../store/settings/settings.actions';
+import {
+    addBeast,
+    packageOfUpdates,
+    updateCPUCharacter,
+    updatePlayerCharacter,
+} from '../store/settings/settings.actions';
 import { ATTACK_METHOD } from '../constants/constants';
 
 
@@ -287,25 +286,41 @@ export class AttackService {
 
         const playerActivity = this.realizeAttack(this.playerCharacter, this.playerAttacks);
         console.log('playerActivity', playerActivity);
-
         this.turn.playerPartyActivities.push(playerActivity);
         this.applyActivity(playerActivity);
 
-        this.store.dispatch(updatePlayerCharacter({ playerCharacter: this.playerCharacter }));
-        this.store.dispatch(updateCPUCharacter({ cpuCharacter: this.cpuCharacter }));
-        if (playerActivity.calledBeasts && playerActivity.calledBeasts.length) {
-            for (const beast of playerActivity.calledBeasts) {
-                this.store.dispatch(addBeast({ beast }));
-            }
-        }
+        this.store.dispatch(packageOfUpdates({
+            data: JSON.stringify({
+                playerCharacter: this.playerCharacter,
+                cpuCharacter: this.cpuCharacter,
+                addedBeasts: playerActivity.calledBeasts,
+                updatedBeasts: [],
+                removedBeasts: [],
+            })
+        }));
     }
 
     public CPUIsMoving(): void {
-        this.defineCPUAttackVector();
         console.log(' ');
         console.log('======================');
         console.log(' ');
         console.log('CPU is moving');
+
+        this.defineCPUAttackVector();
+        const cpuActivity = this.realizeAttack(this.cpuCharacter, this.playerAttacks);
+        console.log('cpuActivity', cpuActivity);
+        this.turn.cpuPartyActivities.push(cpuActivity);
+        this.applyActivity(cpuActivity);
+
+        this.store.dispatch(packageOfUpdates({
+            data: JSON.stringify({
+                playerCharacter: JSON.stringify(this.playerCharacter),
+                cpuCharacter: JSON.stringify(this.cpuCharacter),
+                addedBeasts: cpuActivity.calledBeasts,
+                updatedBeasts: [],
+                removedBeasts: [],
+            })
+        }));
     }
 
     public playersBeastsAreMoving(): void {
@@ -320,5 +335,9 @@ export class AttackService {
         console.log('======================');
         console.log(' ');
         console.log('CPU\'s beast are moving');
+    }
+
+    public getTurn(): ITurn {
+        return this.turn;
     }
 }

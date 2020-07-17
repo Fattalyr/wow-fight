@@ -13,9 +13,9 @@ const cpuPartyId = UUID.UUID();
 export interface ISettingsState {
     playerPartyId: string;
     cpuPartyId: string;
-    playerCharacter: ICharacter;
+    playerCharacter: string; // stringify of ICharacter
     playerBeasts: Array<IBeast | undefined>;
-    cpuCharacter: ICharacter;
+    cpuCharacter: string;    // stringify of ICharacter
     cpuBeasts: Array<IBeast | undefined>;
 }
 
@@ -28,9 +28,9 @@ const cpuCharacterName = randomNumber >= 0.5 ? NAMES.NERZHUL : NAMES.GULDAN;
 const initialState: ISettingsState = {
     playerPartyId,
     cpuPartyId,
-    playerCharacter: createCharacter(playerCharacterName, playerPartyId, UUID.UUID()),
+    playerCharacter: JSON.stringify(createCharacter(playerCharacterName, playerPartyId, UUID.UUID())),
     playerBeasts: [],
-    cpuCharacter: createCharacter(cpuCharacterName, cpuPartyId, UUID.UUID()),
+    cpuCharacter: JSON.stringify(createCharacter(cpuCharacterName, cpuPartyId, UUID.UUID())),
     cpuBeasts: [],
 };
 
@@ -52,12 +52,14 @@ function findBeastInState(state: ISettingsState, beast: IBeast): IFoundBeast {
 const settingsReducer = createReducer(
     initialState,
     on(SettingsActions.updatePlayerCharacter, (state: ISettingsState, { playerCharacter }) => {
-        console.log('update playerCharacter', { ...playerCharacter });
-        return { ...state, playerCharacter };
+        const newState = deepUnfreeze(state);
+        console.log('update playerCharacter', playerCharacter);
+        return { ...newState, playerCharacter: JSON.stringify(playerCharacter) };
     }),
     on(SettingsActions.updateCPUCharacter, (state: ISettingsState, { cpuCharacter }) => {
-        console.log('update cpuCharacter', { ...cpuCharacter });
-        return { ...state, cpuCharacter };
+        const newState = deepUnfreeze(state);
+        console.log('update cpuCharacter', cpuCharacter);
+        return { ...newState, cpuCharacter: JSON.stringify(cpuCharacter) };
     }),
     on(SettingsActions.addBeast, (state: ISettingsState, { beast }) => {
         const newState = deepUnfreeze(state);
@@ -78,10 +80,80 @@ const settingsReducer = createReducer(
     }),
     on(SettingsActions.toggleCharacters, (state: ISettingsState) => {
         const newState = deepUnfreeze(state);
-        const newPlayerCharacter = createCharacter(CHARACTERS_START_DATA[ newState.cpuCharacter.self ].self, playerPartyId, UUID.UUID());
-        const newCPUCharacter = createCharacter(CHARACTERS_START_DATA[ newState.playerCharacter.self ].self, cpuPartyId, UUID.UUID());
-        return { ...newState, playerCharacter: newPlayerCharacter, cpuCharacter: newCPUCharacter };
-    })
+        const playerCharacter = JSON.parse(newState.playerCharacter);
+        const cpuCharacter = JSON.parse(newState.cpuCharacter);
+        const newPlayerCharacter = createCharacter(CHARACTERS_START_DATA[ cpuCharacter.self ].self, playerPartyId, UUID.UUID());
+        const newCPUCharacter = createCharacter(CHARACTERS_START_DATA[ playerCharacter.self ].self, cpuPartyId, UUID.UUID());
+        return { ...newState, playerCharacter: JSON.stringify(newPlayerCharacter), cpuCharacter: JSON.stringify(newCPUCharacter) };
+    }),
+    on(SettingsActions.packageOfUpdates, (state: ISettingsState, { data}) => {
+        const {
+            playerCharacter,
+            cpuCharacter,
+            addedBeasts,
+            updatedBeasts,
+            removedBeasts
+        } = JSON.parse(data);
+        const newState = { ...deepUnfreeze(state), playerCharacter, cpuCharacter };
+
+        if (addedBeasts.length) {
+            for (const addingBeast of addedBeasts) {
+                const theBeastIsFromPlayersParty = addingBeast.party === playerCharacter.party;
+                let partyOfBeast = theBeastIsFromPlayersParty
+                    ? newState.playerBeasts
+                    : newState.cpuBeasts;
+                if (partyOfBeast.findIndex(beast => beast.id === addingBeast.id) > -1) {
+                    continue;
+                }
+                partyOfBeast = [ ...partyOfBeast, addingBeast ];
+                if (theBeastIsFromPlayersParty) {
+                    newState.playerBeasts = partyOfBeast;
+                } else {
+                    newState.cpuBeasts = partyOfBeast;
+                }
+            }
+        }
+
+        if (updatedBeasts.length) {
+            for (const updatingBeast of updatedBeasts) {
+                const theBeastIsFromPlayersParty = updatingBeast.party === playerCharacter.party;
+                const partyOfBeast = theBeastIsFromPlayersParty
+                    ? newState.playerBeasts
+                    : newState.cpuBeasts;
+                const index = partyOfBeast.findIndex(beast => beast.id === updatingBeast.id);
+                if (index < 0) {
+                    throw new Error('Обновляемое существо не найдено в стеке.');
+                }
+                partyOfBeast[index] = updatingBeast;
+                if (theBeastIsFromPlayersParty) {
+                    newState.playerBeasts = partyOfBeast;
+                } else {
+                    newState.cpuBeasts = partyOfBeast;
+                }
+            }
+        }
+
+        if (removedBeasts.length) {
+            for (const removingBeast of removedBeasts) {
+                const theBeastIsFromPlayersParty = removingBeast.party === playerCharacter.party;
+                const partyOfBeast = theBeastIsFromPlayersParty
+                    ? newState.playerBeasts
+                    : newState.cpuBeasts;
+                const index = partyOfBeast.findIndex(beast => beast.id === removingBeast.id);
+                if (index < 0) {
+                    throw new Error('Удаляемое существо не найдено в стеке.');
+                }
+                partyOfBeast.splice(index, 1);
+                if (theBeastIsFromPlayersParty) {
+                    newState.playerBeasts = partyOfBeast;
+                } else {
+                    newState.cpuBeasts = partyOfBeast;
+                }
+            }
+        }
+
+        return newState;
+    }),
 );
 
 export function reducer(state: ISettingsState, action: Action): ISettingsState {

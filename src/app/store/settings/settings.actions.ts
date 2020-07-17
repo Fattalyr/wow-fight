@@ -3,12 +3,12 @@ import { IBeast, ICharacter } from '../../classes/characters';
 
 export const updatePlayerCharacter = createAction(
     `[ SETTINGS ] Update Player Character`,
-    props<{ playerCharacter: ICharacter }>()
+    props<{ playerCharacter: string }>()
 );
 
 export const updateCPUCharacter = createAction(
     `[ SETTINGS ] Update CPU Character`,
-    props<{ cpuCharacter: ICharacter }>()
+    props<{ cpuCharacter: string }>()
 );
 
 export const addBeast = createAction(
@@ -23,4 +23,18 @@ export const updateBeast = createAction(
 
 export const toggleCharacters = createAction(
     `[ SETTINGS ] Toggle Characters`
+);
+
+/**
+ * @description {
+ *       playerCharacter: ICharacter,
+ *       cpuCharacter: ICharacter,
+ *       addedBeasts: IBeast[],
+ *       updatedBeasts: IBeast[],
+ *       removedBeasts: IBeast[]
+ *   }
+ */
+export const packageOfUpdates = createAction(
+    `[ SETTINGS ] Package Of Updates`,
+    props<{ data: string }>()
 );

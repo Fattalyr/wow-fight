@@ -15,6 +15,7 @@ import { BattleComponent } from './battle/battle.component';
 import { CharacterCardComponent } from './battle/character-card/character-card.component';
 import { AttackComponent } from './attack/attack.component';
 import { RoundPipe } from './pipes/round.pipe';
+import { ParsePipe } from './pipes/parse.pipe';
 
 @NgModule({
   declarations: [
@@ -24,6 +25,7 @@ import { RoundPipe } from './pipes/round.pipe';
     CharacterCardComponent,
     AttackComponent,
     RoundPipe,
+    ParsePipe,
   ],
   imports: [
     BrowserModule,

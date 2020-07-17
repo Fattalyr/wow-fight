@@ -1,23 +1,32 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, CreateEffectMetadata, ofType } from '@ngrx/effects';
-import { combineLatest, } from 'rxjs';
+import { combineLatest, interval } from 'rxjs';
 import { distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
 import { Store } from '@ngrx/store';
 import {
+    selectAllCharactersAndBeasts,
     selectCPUBeasts,
     selectCPUCharacter,
     selectPlayerBeasts,
     selectPlayerCharacter,
 } from '../settings/settings.selectors';
 import { AttackService } from '../../services/attack.service';
-import { nextMove, playerPassedTurn } from './battle.actions';
+import {
+    CPUMove,
+    CPUsBeastsMove,
+    nextMove,
+    playerBeastsMove,
+    playerMove,
+    playerPassedTurn,
+    turnCompleted,
+} from './battle.actions';
 import { MOVING_QUERY } from '../../constants/constants';
 import { MOVING_STATUS } from '../../models';
 
 
 @Injectable()
 export class BattleEffects {
-    public getBattle$ = this.getBattleFn$();
+    public startMove$ = this.startMoveFn$();
     public getMove$ = this.nextMoveFn$();
 
     constructor(
@@ -27,13 +36,63 @@ export class BattleEffects {
     ) {
     }
 
-    private getBattleFn$(): CreateEffectMetadata {
+    private startMoveFn$(): CreateEffectMetadata {
         return createEffect(() => this.actions$.pipe(
             ofType(playerPassedTurn),
             map(() => {
                 const status = MOVING_QUERY[1];
-                return nextMove({ move: status });
+                // return nextMove({ move: status });
+                return playerMove();
             }),
+        ));
+    }
+
+    private playerMoveFn$(): CreateEffectMetadata {
+        return createEffect(() => this.actions$.pipe(
+            ofType(playerMove),
+            map((val) => {
+                this.attackService.initNewTurn();
+                this.attackService.playerIsMoving();
+                return val;
+            }),
+            switchMap(() => this.store.select(selectAllCharactersAndBeasts)),
+            map(() => playerBeastsMove()),
+        ));
+    }
+
+    private playersBeastsMoveFn$(): CreateEffectMetadata {
+        return createEffect(() => this.actions$.pipe(
+            ofType(playerBeastsMove),
+            map((val) => {
+                this.attackService.playersBeastsAreMoving();
+                return val;
+            }),
+            switchMap(() => this.store.select(selectAllCharactersAndBeasts)),
+            map(() => CPUMove()),
+        ));
+    }
+
+    private CPUMoveFn$(): CreateEffectMetadata {
+        return createEffect(() => this.actions$.pipe(
+            ofType(CPUMove),
+            map((val) => {
+                this.attackService.CPUIsMoving();
+                return val;
+            }),
+            switchMap(() => this.store.select(selectAllCharactersAndBeasts)),
+            map(() => CPUsBeastsMove()),
+        ));
+    }
+
+    private CPUsBeastsMoveFn$(): CreateEffectMetadata {
+        return createEffect(() => this.actions$.pipe(
+            ofType(CPUsBeastsMove),
+            map((val) => {
+                this.attackService.CPUsBeastsAreMoving();
+                return val;
+            }),
+            switchMap(() => this.store.select(selectAllCharactersAndBeasts)),
+            map(() => turnCompleted({ turn: this.attackService.getTurn() })),
         ));
     }
 
@@ -74,6 +133,9 @@ export class BattleEffects {
 
                 return { nextPlayer, currentPlayer };
             }),
+            switchMap(({ nextPlayer, }) => interval(2000)
+                .pipe(map(() => ({ nextPlayer, }))),
+            ),
             switchMap(({ nextPlayer, }) => combineLatest([
                 this.store.select(selectPlayerCharacter),
                 this.store.select(selectCPUCharacter),

@@ -15,12 +15,12 @@ export const selectCPUPartyId = createSelector(
 
 export const selectPlayerCharacter = createSelector(
     selectSettings,
-    state => state.playerCharacter,
+    state => JSON.parse(state.playerCharacter),
 );
 
 export const selectCPUCharacter = createSelector(
     selectSettings,
-    state => state.cpuCharacter,
+    state => JSON.parse(state.cpuCharacter),
 );
 
 export const selectPlayerBeasts = createSelector(
@@ -31,4 +31,14 @@ export const selectPlayerBeasts = createSelector(
 export const selectCPUBeasts = createSelector(
     selectSettings,
     state => state.cpuBeasts,
+);
+
+export const selectAllCharactersAndBeasts = createSelector(
+    selectSettings,
+    state => [
+        state.playerCharacter,
+        state.playerBeasts,
+        state.cpuCharacter,
+        state.cpuBeasts,
+    ],
 );
