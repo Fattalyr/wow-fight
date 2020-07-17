@@ -10,8 +10,8 @@ import {
     selectCPUCharacter,
     selectPlayerPartyId,
     selectCPUPartyId,
-} from '../store/settings/settings.selectors';
-import { toggleCharacters } from '../store/settings/settings.actions';
+} from '../store/parties/parties.selectors';
+import { toggleCharacters } from '../store/parties/parties.actions';
 import { NAMES } from '../models';
 
 

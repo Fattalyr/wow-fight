@@ -1,5 +1,5 @@
 import { UUID } from 'angular2-uuid';
-import { BEASTS, CraftedSpells, IBeastsData, ICalculatedParams, ICharacterData, NAMES } from '../models';
+import { BEASTS, CraftedSpells, IBeastsData, ICalculatedParams, ICharacterData, ISpell, NAMES } from '../models';
 import { BEASTS_DATA, CHARACTERS_START_DATA, MULTIPLIERS } from '../constants/constants';
 
 
@@ -79,4 +79,71 @@ export function createCharacter(name: NAMES, party: string, id?: string): IChara
         spellbound: [],
         castedSpells: [],
     };
+}
+
+export enum NORMALIZATION_MAP {
+    PLAYER = 'player',
+    CPU = 'cpu',
+}
+
+export interface INormalizedPlayer {
+    /* Player Character */
+    playerSelf: NAMES | BEASTS;
+    playerId: string;
+    playerParty: string;
+    playerSlug: string;
+    playerSpellbound: CraftedSpells;
+    playerCastedSpells: CraftedSpells;
+    playerIsAlive: boolean;
+    /* Player Character: { inheritedData: ... } */
+    playerInheritedSelf: NAMES;
+    playerInheritedStrength: number;
+    playerInheritedAgility: number;
+    playerInheritedIntellect: number;
+    playerInheritedStamina: number;
+    playerInheritedSpells: ISpell[];
+    playerInheritedDps?: number;
+    playerInheritedHp?: number;
+    playerInheritedCrit?: number;
+    /* Player Character: { currentData: ... } */
+    playerCurrentSelf: NAMES;
+    playerCurrentStrength: number;
+    playerCurrentAgility: number;
+    playerCurrentIntellect: number;
+    playerCurrentStamina: number;
+    playerCurrentSpells: ISpell[];
+    playerCurrentDps?: number;
+    playerCurrentHp?: number;
+    playerCurrentCrit?: number;
+}
+
+export interface INormalizedCPU {
+    /* CPU Character */
+    cpuSelf: NAMES | BEASTS;
+    cpuId: string;
+    cpuParty: string;
+    cpuSlug: string;
+    cpuSpellbound: CraftedSpells;
+    cpuCastedSpells: CraftedSpells;
+    cpuIsAlive: boolean;
+    /* CPU Character: { inheritedData: ... } */
+    cpuInheritedSelf: NAMES;
+    cpuInheritedStrength: number;
+    cpuInheritedAgility: number;
+    cpuInheritedIntellect: number;
+    cpuInheritedStamina: number;
+    cpuInheritedSpells: ISpell[];
+    cpuInheritedDps?: number;
+    cpuInheritedHp?: number;
+    cpuInheritedCrit?: number;
+    /* CPU Character: { currentData: ... } */
+    cpuCurrentSelf: NAMES;
+    cpuCurrentStrength: number;
+    cpuCurrentAgility: number;
+    cpuCurrentIntellect: number;
+    cpuCurrentStamina: number;
+    cpuCurrentSpells: ISpell[];
+    cpuCurrentDps?: number;
+    cpuCurrentHp?: number;
+    cpuCurrentCrit?: number;
 }

@@ -11,7 +11,7 @@ import {
     selectPlayerCharacter,
     selectPlayerPartyId,
     selectSettings,
-} from '../store/settings/settings.selectors';
+} from '../store/parties/parties.selectors';
 import { selectTotalTurns, selectTurns } from '../store/battle/battle.selectors';
 import {
     NAMES,
@@ -19,7 +19,7 @@ import {
     Party,
 } from '../models';
 import { AttackService } from '../services/attack.service';
-import { playerPassedTurn } from '../store/battle/battle.actions';
+import { playerJustHasStartedMove } from '../store/parties/parties.actions';
 
 
 @Component({
@@ -121,6 +121,6 @@ export class BattleComponent implements OnInit, OnDestroy {
     }
 
     public turnRound(): void {
-        this.store.dispatch(playerPassedTurn());
+        this.store.dispatch(playerJustHasStartedMove());
     }
 }

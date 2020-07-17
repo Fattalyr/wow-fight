@@ -1,37 +1,31 @@
-import { createReducer, on, Action } from '@ngrx/store';
+import { Action, createReducer, on } from '@ngrx/store';
 import { UUID } from 'angular2-uuid';
 import deepUnfreeze from 'deep-unfreeze';
-import * as SettingsActions from './settings.actions';
+import * as PartiesActions from './parties.actions';
 import { NAMES } from '../../models';
 import { CHARACTERS_START_DATA } from '../../constants/constants';
-import { createCharacter, IBeast, ICharacter } from '../../classes/characters';
+import { createCharacter, IBeast, NORMALIZATION_MAP } from '../../classes/characters';
+import { IPartyState } from './parties.models';
+import { CharacterNormalizeService } from './character-normalize.service';
 
 
 const playerPartyId = UUID.UUID();
 const cpuPartyId = UUID.UUID();
 
-export interface ISettingsState {
-    playerPartyId: string;
-    cpuPartyId: string;
-    playerCharacter: string; // stringify of ICharacter
-    playerBeasts: Array<IBeast | undefined>;
-    cpuCharacter: string;    // stringify of ICharacter
-    cpuBeasts: Array<IBeast | undefined>;
-}
-
-export const settingsFeatureKey = 'settings';
+export const settingsFeatureKey = 'parties';
 
 const randomNumber = Math.random();
 const playerCharacterName = randomNumber < 0.5 ? NAMES.NERZHUL : NAMES.GULDAN;
 const cpuCharacterName = randomNumber >= 0.5 ? NAMES.NERZHUL : NAMES.GULDAN;
 
-const initialState: ISettingsState = {
+const initialState: IPartyState = {
+    ...CharacterNormalizeService.normalizePlayer(createCharacter(playerCharacterName, playerPartyId, UUID.UUID())),
+    ...CharacterNormalizeService.normalizeCPU(createCharacter(cpuCharacterName, cpuPartyId, UUID.UUID())),
     playerPartyId,
     cpuPartyId,
-    playerCharacter: JSON.stringify(createCharacter(playerCharacterName, playerPartyId, UUID.UUID())),
     playerBeasts: [],
-    cpuCharacter: JSON.stringify(createCharacter(cpuCharacterName, cpuPartyId, UUID.UUID())),
     cpuBeasts: [],
+    playerPassedTurn: false,
 };
 
 export interface IFoundBeast {
@@ -39,7 +33,7 @@ export interface IFoundBeast {
     beastIndex: number;
 }
 
-function findBeastInState(state: ISettingsState, beast: IBeast): IFoundBeast {
+function findBeastInState(state: IPartyState, beast: IBeast): IFoundBeast {
     const playersBeastIndex = state.playerBeasts.findIndex(playerBeast => playerBeast.id === beast.id);
     if (playersBeastIndex > -1) {
         return { beastOwner: 'playerBeasts', beastIndex: playersBeastIndex };
@@ -49,19 +43,17 @@ function findBeastInState(state: ISettingsState, beast: IBeast): IFoundBeast {
     return { beastOwner: 'cpuBeasts', beastIndex: cpuBeastIndex };
 }
 
-const settingsReducer = createReducer(
+const partiesReducer = createReducer(
     initialState,
-    on(SettingsActions.updatePlayerCharacter, (state: ISettingsState, { playerCharacter }) => {
+    on(PartiesActions.updatePlayerCharacter, (state: IPartyState, { playerCharacter }) => {
         const newState = deepUnfreeze(state);
-        console.log('update playerCharacter', playerCharacter);
-        return { ...newState, playerCharacter: JSON.stringify(playerCharacter) };
+        return { ...newState, ...CharacterNormalizeService.normalizePlayer(playerCharacter) };
     }),
-    on(SettingsActions.updateCPUCharacter, (state: ISettingsState, { cpuCharacter }) => {
+    on(PartiesActions.updateCPUCharacter, (state: IPartyState, { cpuCharacter }) => {
         const newState = deepUnfreeze(state);
-        console.log('update cpuCharacter', cpuCharacter);
-        return { ...newState, cpuCharacter: JSON.stringify(cpuCharacter) };
+        return { ...newState, ...CharacterNormalizeService.normalizeCPU(cpuCharacter) };
     }),
-    on(SettingsActions.addBeast, (state: ISettingsState, { beast }) => {
+    on(PartiesActions.addBeast, (state: IPartyState, { beast }) => {
         const newState = deepUnfreeze(state);
         if (newState.playerPartyId === beast.party) {
             newState.playerBeasts.push(beast);
@@ -71,30 +63,44 @@ const settingsReducer = createReducer(
         console.log('add beast', { ...beast });
         return newState;
     }),
-    on(SettingsActions.updateBeast, (state: ISettingsState, { beast }) => {
+    on(PartiesActions.updateBeast, (state: IPartyState, { beast }) => {
         const newState = deepUnfreeze(state);
         const { beastOwner, beastIndex } = findBeastInState(newState, beast);
         if (beastIndex) { return newState; }
         newState[beastOwner][beastIndex] = beast;
         return newState;
     }),
-    on(SettingsActions.toggleCharacters, (state: ISettingsState) => {
+    on(PartiesActions.toggleCharacters, (state: IPartyState) => {
         const newState = deepUnfreeze(state);
-        const playerCharacter = JSON.parse(newState.playerCharacter);
-        const cpuCharacter = JSON.parse(newState.cpuCharacter);
+        const playerCharacter = CharacterNormalizeService.deNormalize(state, NORMALIZATION_MAP.PLAYER);
+        const cpuCharacter = CharacterNormalizeService.deNormalize(state, NORMALIZATION_MAP.CPU);
         const newPlayerCharacter = createCharacter(CHARACTERS_START_DATA[ cpuCharacter.self ].self, playerPartyId, UUID.UUID());
         const newCPUCharacter = createCharacter(CHARACTERS_START_DATA[ playerCharacter.self ].self, cpuPartyId, UUID.UUID());
-        return { ...newState, playerCharacter: JSON.stringify(newPlayerCharacter), cpuCharacter: JSON.stringify(newCPUCharacter) };
+        return {
+            ...newState,
+            ...CharacterNormalizeService.normalizePlayer(newPlayerCharacter),
+            ...CharacterNormalizeService.normalizeCPU(newCPUCharacter),
+        };
     }),
-    on(SettingsActions.packageOfUpdates, (state: ISettingsState, { data}) => {
+    on(PartiesActions.packageOfUpdates, (state: IPartyState, updates) => {
         const {
-            playerCharacter,
-            cpuCharacter,
             addedBeasts,
             updatedBeasts,
             removedBeasts
-        } = JSON.parse(data);
-        const newState = { ...deepUnfreeze(state), playerCharacter, cpuCharacter };
+        } = updates;
+
+        const unfrozenUpdates = deepUnfreeze(updates);
+
+        const playerCharacter = CharacterNormalizeService.deNormalize(updates, NORMALIZATION_MAP.PLAYER);
+        const cpuCharacter = CharacterNormalizeService.deNormalize(updates, NORMALIZATION_MAP.CPU);
+
+        delete unfrozenUpdates.addedBeasts;
+        delete unfrozenUpdates.updatedBeasts;
+        delete unfrozenUpdates.removedBeasts;
+
+        const characters = { ...unfrozenUpdates };
+
+        const newState = { ...deepUnfreeze(state), ...characters };
 
         if (addedBeasts.length) {
             for (const addingBeast of addedBeasts) {
@@ -154,8 +160,21 @@ const settingsReducer = createReducer(
 
         return newState;
     }),
+    on(PartiesActions.playerJustHasStartedMove, (state) => {
+        console.log('Player passed turn');
+        return {
+            ...state,
+            playerPassedTurn: true,
+        };
+    }),
+    on(PartiesActions.moveCompleted, (state) => {
+        return {
+            ...state,
+            playerPassedTurn: false,
+        };
+    }),
 );
 
-export function reducer(state: ISettingsState, action: Action): ISettingsState {
-    return settingsReducer(state, action);
+export function reducer(state: IPartyState, action: Action): IPartyState {
+    return partiesReducer(state, action);
 }

@@ -1,7 +1,10 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
-import { ISettingsState, settingsFeatureKey } from './settings.reducer';
+import { settingsFeatureKey } from './parties.reducer';
+import { CharacterNormalizeService } from './character-normalize.service';
+import { NORMALIZATION_MAP } from '../../classes/characters';
+import { IPartyState } from './parties.models';
 
-export const selectSettings = createFeatureSelector<ISettingsState>(settingsFeatureKey);
+export const selectSettings = createFeatureSelector<IPartyState>(settingsFeatureKey);
 
 export const selectPlayerPartyId = createSelector(
     selectSettings,
@@ -15,12 +18,12 @@ export const selectCPUPartyId = createSelector(
 
 export const selectPlayerCharacter = createSelector(
     selectSettings,
-    state => JSON.parse(state.playerCharacter),
+    state => CharacterNormalizeService.deNormalize(state, NORMALIZATION_MAP.PLAYER),
 );
 
 export const selectCPUCharacter = createSelector(
     selectSettings,
-    state => JSON.parse(state.cpuCharacter),
+    state => CharacterNormalizeService.deNormalize(state, NORMALIZATION_MAP.CPU),
 );
 
 export const selectPlayerBeasts = createSelector(
@@ -36,9 +39,9 @@ export const selectCPUBeasts = createSelector(
 export const selectAllCharactersAndBeasts = createSelector(
     selectSettings,
     state => [
-        state.playerCharacter,
+        CharacterNormalizeService.deNormalize(state, NORMALIZATION_MAP.PLAYER),
         state.playerBeasts,
-        state.cpuCharacter,
+        CharacterNormalizeService.deNormalize(state, NORMALIZATION_MAP.CPU),
         state.cpuBeasts,
     ],
 );

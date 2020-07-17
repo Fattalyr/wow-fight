@@ -11,22 +11,19 @@ import {
 } from '../models';
 import { IActivity, ITurn, } from '../store/battle/battle.reducer';
 import { createBeast, IBeast, ICharacter } from '../classes/characters';
-import { combineLatest, Subject } from 'rxjs';
+import { combineLatest } from 'rxjs';
 import {
     selectCPUBeasts,
     selectCPUCharacter,
     selectPlayerBeasts,
     selectPlayerCharacter,
-} from '../store/settings/settings.selectors';
-import { map, switchMap, tap } from 'rxjs/operators';
+} from '../store/parties/parties.selectors';
+import { map, tap, switchMap, } from 'rxjs/operators';
+import { CharacterNormalizeService } from '../store/parties/character-normalize.service';
 import { selectTurns } from '../store/battle/battle.selectors';
-import {
-    addBeast,
-    packageOfUpdates,
-    updateCPUCharacter,
-    updatePlayerCharacter,
-} from '../store/settings/settings.actions';
+import { packageOfUpdates, } from '../store/parties/parties.actions';
 import { ATTACK_METHOD } from '../constants/constants';
+import { IPartyUpdates } from '../store/parties/parties.models';
 
 
 @Injectable({
@@ -49,7 +46,10 @@ export class AttackService {
     public cpuAttacks: IPossibleAttack;
     public roundNumber: number;
 
-    constructor(private store: Store) {}
+    constructor(
+        private store: Store,
+        private characterNormalizeService: CharacterNormalizeService,
+    ) {}
 
     public characterUpdatesFlow$ = combineLatest([
         this.store.select(selectPlayerCharacter),
@@ -290,14 +290,12 @@ export class AttackService {
         this.applyActivity(playerActivity);
 
         this.store.dispatch(packageOfUpdates({
-            data: JSON.stringify({
-                playerCharacter: this.playerCharacter,
-                cpuCharacter: this.cpuCharacter,
-                addedBeasts: playerActivity.calledBeasts,
-                updatedBeasts: [],
-                removedBeasts: [],
-            })
-        }));
+            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+            addedBeasts: playerActivity.calledBeasts,
+            updatedBeasts: [],
+            removedBeasts: [],
+        } as IPartyUpdates));
     }
 
     public CPUIsMoving(): void {
@@ -312,15 +310,21 @@ export class AttackService {
         this.turn.cpuPartyActivities.push(cpuActivity);
         this.applyActivity(cpuActivity);
 
+        console.log({
+            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+            addedBeasts: cpuActivity.calledBeasts,
+            updatedBeasts: [],
+            removedBeasts: [],
+        });
+
         this.store.dispatch(packageOfUpdates({
-            data: JSON.stringify({
-                playerCharacter: JSON.stringify(this.playerCharacter),
-                cpuCharacter: JSON.stringify(this.cpuCharacter),
-                addedBeasts: cpuActivity.calledBeasts,
-                updatedBeasts: [],
-                removedBeasts: [],
-            })
-        }));
+            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+            addedBeasts: cpuActivity.calledBeasts,
+            updatedBeasts: [],
+            removedBeasts: [],
+        } as IPartyUpdates));
     }
 
     public playersBeastsAreMoving(): void {

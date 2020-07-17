@@ -1,6 +1,6 @@
 import { Action, createReducer, on } from '@ngrx/store';
 import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
-import { deleteBattle, nextMove, playerPassedTurn, turnCompleted } from './battle.actions';
+import { deleteBattle, turnCompleted } from './battle.actions';
 import { IPossibleAttack, CraftedSpells, MOVING_STATUS, ISpell } from '../../models';
 import { ATTACK_METHOD } from '../../constants/constants';
 import { IBeast } from '../../classes/characters';
@@ -30,13 +30,11 @@ export interface ITurn {
     roundNumber: number;
     playersActivities: ITurnActivity;
     cpusActivities: ITurnActivity;
-
     playerPartyActivities: IActivity[];
     cpuPartyActivities: IActivity[];
 }
 
 export interface ITurnActivitiesState extends EntityState<ITurn> {
-    playerPassedTurn: boolean; // Игрок нажал кнопку "Сделать ход" и теперь происходят действия по цепочке.
     movingCurrentStage: MOVING_STATUS;
 }
 
@@ -57,14 +55,6 @@ const turnActivitiesReducerFn = createReducer(
     on(deleteBattle,
         (state) => adapter.removeAll(state)
     ),
-    on(playerPassedTurn, (state) => ({
-        ...state,
-        playerPassedTurn: true,
-    })),
-    on(nextMove, (state, { move }) => ({
-        ...state,
-        movingCurrentStage: move,
-    }))
 );
 
 export function reducer(state: ITurnActivitiesState, action: Action): ITurnActivitiesState {
