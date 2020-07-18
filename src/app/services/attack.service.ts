@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { select, Store } from '@ngrx/store';
 import deepUnfreeze from 'deep-unfreeze';
 import {
@@ -21,9 +22,15 @@ import {
 import { map, tap, switchMap, } from 'rxjs/operators';
 import { CharacterNormalizeService } from '../store/parties/character-normalize.service';
 import { selectTurns } from '../store/battle/battle.selectors';
-import { packageOfUpdates, } from '../store/parties/parties.actions';
+import {
+    playerMoveCompleted,
+    playerBeastsMoveCompleted,
+    CPUMoveCompleted,
+    CPUsBeastsMoveCompleted,
+} from '../store/parties/parties.actions';
 import { ATTACK_METHOD } from '../constants/constants';
 import { IPartyUpdates } from '../store/parties/parties.models';
+import { turnCompleted } from '../store/battle/battle.actions';
 
 
 @Injectable({
@@ -43,12 +50,11 @@ export class AttackService {
     public cpusAvailableAttackVectors: IAvailableAttackVectors;
     private turns$ = this.store.pipe(select(selectTurns));
     public playerAttacks: IPossibleAttack;
-    public cpuAttacks: IPossibleAttack;
     public roundNumber: number;
 
     constructor(
         private store: Store,
-        private characterNormalizeService: CharacterNormalizeService,
+        private router: Router,
     ) {}
 
     public characterUpdatesFlow$ = combineLatest([
@@ -133,13 +139,15 @@ export class AttackService {
             critFired,
         };
 
+        if (method === ATTACK_METHOD.SPELL) {
+            resultActivity.spell = attack.spell;
+        }
+
         if (method === ATTACK_METHOD.HIT) {
             resultActivity.damage = character.currentData.dps * (critFired ? 1.5 : 1);
         } else if (method === ATTACK_METHOD.SPELL && attack?.spell?.HPDelta) {
-            resultActivity.spell = attack.spell;
             resultActivity.damage = attack.spell.HPDelta;
         } else if (method === ATTACK_METHOD.SPELL && attack?.spell?.callBeast) {
-            resultActivity.spell = attack.spell;
             resultActivity.calledBeasts = [ createBeast(attack.spell.calledBeast.type, character.party) ];
         }
 
@@ -148,11 +156,14 @@ export class AttackService {
 
     private calculateAttackVectors(
         turns: ITurn[],
-        character: ICharacter,
+        assaulter: ICharacter | IBeast,
         availableEnemies: Party
     ): IAvailableAttackVectors {
         const len = turns.length;
         const enemies: string[] = [];
+        const availableSpells = 'spells' in assaulter.inheritedData && assaulter.inheritedData.spells
+            ? [ ...assaulter.inheritedData.spells ]
+            : [];
 
         for (const enemy of availableEnemies) {
             enemies.push(enemy.id);
@@ -161,27 +172,27 @@ export class AttackService {
         if (len === 0) {
             return {
                 canHit: true,
-                spells: [ ...character.inheritedData.spells ],
+                spells: availableSpells,
                 availableEnemies: enemies,
             };
         }
 
-        const castedByCharacterSpells: CraftedSpells = this.reduceSpells(character.castedSpells);
+        const castedByCharacterSpells: CraftedSpells = this.reduceSpells(assaulter.castedSpells);
         const castedSpellNames: string[] = Object.keys(castedByCharacterSpells);
         let canSpell: ISpell[] = [];
 
         if (castedSpellNames.length === 0) {
-            canSpell = [ ...character.inheritedData.spells ];
+            canSpell = availableSpells;
         } else {
-            for (const spell in character.inheritedData.spells) {
-                if (castedSpellNames[character.inheritedData.spells[spell].spellName] === undefined) {
-                    canSpell.push(character.inheritedData.spells[spell]);
+            for (const spell in availableSpells) {
+                if (castedSpellNames[availableSpells[spell].spellName] === undefined) {
+                    canSpell.push(availableSpells[spell]);
                 }
             }
         }
 
         return {
-            canHit: !Object.keys(character.spellbound).includes(SPELLS.FEAR),
+            canHit: !Object.keys(assaulter.spellbound).includes(SPELLS.FEAR),
             spells: [ ...canSpell ],
             availableEnemies: enemies,
         };
@@ -189,6 +200,7 @@ export class AttackService {
 
     public calculatePossibleAttacks(availableVectors: IAvailableAttackVectors): IPossibleAttack[] {
         const availableAttacks: IPossibleAttack[] = [];
+        console.log('availableVectors', availableVectors);
 
         for (const enemy of availableVectors.availableEnemies) {
             if (availableVectors.canHit) {
@@ -252,14 +264,14 @@ export class AttackService {
         }
     }
 
-    private defineCPUAttackVector(): void {
-        const possibleAttacks = this.calculatePossibleAttacks(this.cpusAvailableAttackVectors);
+    private defineCPUAttackVector(availableAttacks: IAvailableAttackVectors): IPossibleAttack {
+        const possibleAttacks = this.calculatePossibleAttacks(availableAttacks);
         const length = possibleAttacks.length;
         if (length === 0) {
             throw new Error('CPU не имеет векторов атак.');
         }
         const random = Math.round(Math.random() * 100000) % length;
-        this.cpuAttacks = possibleAttacks[random];
+        return possibleAttacks[random];
     }
 
     public initNewTurn(): void {
@@ -285,14 +297,14 @@ export class AttackService {
         console.log('Player is moving');
 
         const playerActivity = this.realizeAttack(this.playerCharacter, this.playerAttacks);
-        console.log('playerActivity', playerActivity);
         this.turn.playerPartyActivities.push(playerActivity);
+        console.log('playerActivity', playerActivity);
         this.applyActivity(playerActivity);
 
-        this.store.dispatch(packageOfUpdates({
+        this.store.dispatch(playerMoveCompleted({
             ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
             ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
-            addedBeasts: playerActivity.calledBeasts,
+            addedBeasts: playerActivity.calledBeasts || [],
             updatedBeasts: [],
             removedBeasts: [],
         } as IPartyUpdates));
@@ -304,24 +316,17 @@ export class AttackService {
         console.log(' ');
         console.log('CPU is moving');
 
-        this.defineCPUAttackVector();
-        const cpuActivity = this.realizeAttack(this.cpuCharacter, this.playerAttacks);
-        console.log('cpuActivity', cpuActivity);
+        const attack = this.defineCPUAttackVector(this.cpusAvailableAttackVectors);
+        console.log('attack', attack);
+        const cpuActivity = this.realizeAttack(this.cpuCharacter, attack);
         this.turn.cpuPartyActivities.push(cpuActivity);
+        console.log('cpuActivity', cpuActivity);
         this.applyActivity(cpuActivity);
 
-        console.log({
+        this.store.dispatch(CPUMoveCompleted({
             ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
             ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
-            addedBeasts: cpuActivity.calledBeasts,
-            updatedBeasts: [],
-            removedBeasts: [],
-        });
-
-        this.store.dispatch(packageOfUpdates({
-            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
-            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
-            addedBeasts: cpuActivity.calledBeasts,
+            addedBeasts: cpuActivity.calledBeasts || [],
             updatedBeasts: [],
             removedBeasts: [],
         } as IPartyUpdates));
@@ -331,17 +336,69 @@ export class AttackService {
         console.log(' ');
         console.log('======================');
         console.log(' ');
-        console.log('Player\'s beast are moving');
+        console.log('Player\'s beasts are moving');
+
+        const playerBeastActivities = [];
+
+        for (const playersBeast of this.playersBeasts) {
+            const playersBeastsAvailableAttackVectors = this.calculateAttackVectors(this.turns, playersBeast, this.cpuParty);
+            const attack = this.defineCPUAttackVector(playersBeastsAvailableAttackVectors);
+            const beastActivity = this.realizeAttack(playersBeast, attack);
+            this.applyActivity(beastActivity);
+            playerBeastActivities.push(beastActivity);
+        }
+
+        this.turn.playerPartyActivities = [ ...this.turn.playerPartyActivities, ...playerBeastActivities ];
+
+        this.store.dispatch(playerBeastsMoveCompleted({
+            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+            addedBeasts: [],
+            updatedBeasts: [],
+            removedBeasts: [],
+        } as IPartyUpdates));
     }
 
     public CPUsBeastsAreMoving(): void {
         console.log(' ');
         console.log('======================');
         console.log(' ');
-        console.log('CPU\'s beast are moving');
+        console.log('CPU\'s beasts are moving');
+
+        const cpuBeastActivities = [];
+
+        for (const cpusBeast of this.cpusBeasts) {
+            const cpusBeastsAvailableAttackVectors = this.calculateAttackVectors(this.turns, cpusBeast, this.cpuParty);
+            const attack = this.defineCPUAttackVector(cpusBeastsAvailableAttackVectors);
+            const beastActivity = this.realizeAttack(cpusBeast, attack);
+            this.applyActivity(beastActivity);
+            cpuBeastActivities.push(beastActivity);
+        }
+
+        this.turn.playerPartyActivities = [ ...this.turn.playerPartyActivities, ...cpuBeastActivities ];
+
+        this.store.dispatch(CPUsBeastsMoveCompleted({
+            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+            addedBeasts: [],
+            updatedBeasts: [],
+            removedBeasts: [],
+        } as IPartyUpdates));
     }
 
     public getTurn(): ITurn {
         return this.turn;
+    }
+
+    public saveTurn(): void {
+        this.store.dispatch(turnCompleted({ turn: this.turn }));
+    }
+
+    public initNewTurnOrFinalizeGame(): void {
+        if (this.playerCharacter.isAlive && this.cpuCharacter.isAlive) {
+            this.initNewTurn();
+        } else {
+            this.router.navigate(['/result']);
+        }
     }
 }

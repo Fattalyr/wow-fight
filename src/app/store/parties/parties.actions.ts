@@ -1,7 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 import { IBeast, ICharacter } from '../../classes/characters';
 import { IPartyUpdates } from './parties.models';
-import { ITurn } from '../battle/battle.reducer';
 
 export const updatePlayerCharacter = createAction(
     `[ PARTIES ] Update Player Character`,
@@ -31,28 +30,42 @@ export const playerJustHasStartedMove = createAction(
     `[ MOVE ] Player Just Has Started Move`,
 );
 
-export const moveCompleted = createAction(
-    `[ MOVE ] Move Completed`,
-    props<{ turn: ITurn }>()
+export const playerMoveStarted = createAction(
+    `[ PLAYER MOVE ] Started`
 );
 
-export const packageOfUpdates = createAction(
-    `[ PARTIES ] Package Of Updates`,
+export const playerMoveCompleted = createAction(
+    `[ PLAYER MOVE ] Completed`,
     props<IPartyUpdates>()
 );
 
-export const playerMove = createAction(
-    `[ PLAYER MOVE ] Executing`
+export const playerBeastsMoveStarted = createAction(
+    `[ PLAYER\'S BEASTS MOVE ] Started`
 );
 
-export const playerBeastsMove = createAction(
-    `[ PLAYER\'S BEASTS MOVE ] Executing`
+export const playerBeastsMoveCompleted = createAction(
+    `[ PLAYER\'S BEASTS MOVE ] Completed`,
+    props<IPartyUpdates>()
 );
 
-export const CPUMove = createAction(
-    `[ CPU MOVE ] Executing`
+export const CPUMoveStarted = createAction(
+    `[ CPU MOVE ] Started`
 );
 
-export const CPUsBeastsMove = createAction(
-    `[ CPU\'s BEASTS MOVE ] Executing`
+export const CPUMoveCompleted = createAction(
+    `[ CPU MOVE ] Completed`,
+    props<IPartyUpdates>()
+);
+
+export const CPUsBeastsMoveStarted = createAction(
+    `[ CPU\'s BEASTS MOVE ] Started`
+);
+
+export const CPUsBeastsMoveCompleted = createAction(
+    `[ CPU\'s BEASTS MOVE ] Completed`,
+    props<IPartyUpdates>()
+);
+
+export const moveCompleted = createAction(
+    `[ MOVE ] Move Completed`
 );

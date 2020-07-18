@@ -1,26 +1,28 @@
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, CreateEffectMetadata, ofType } from '@ngrx/effects';
-import { combineLatest, interval } from 'rxjs';
-import { distinctUntilChanged, filter, map, switchMap, tap } from 'rxjs/operators';
-import { selectAllCharactersAndBeasts, } from '../parties/parties.selectors';
+import { map, switchMap, tap } from 'rxjs/operators';
 import { AttackService } from '../../services/attack.service';
 import {
-    CPUMove,
-    CPUsBeastsMove,
-    moveCompleted, packageOfUpdates,
-    playerBeastsMove,
     playerJustHasStartedMove,
-    playerMove,
+    playerMoveStarted,
+    playerMoveCompleted,
+    playerBeastsMoveStarted,
+    playerBeastsMoveCompleted,
+    CPUMoveStarted,
+    CPUMoveCompleted,
+    CPUsBeastsMoveStarted,
+    CPUsBeastsMoveCompleted,
+    moveCompleted,
 } from './parties.actions';
 
 
 @Injectable()
 export class PartiesEffects {
     public startMove$ = this.startMoveFn$();
-    public playerMove$ = this.playerMoveFn$();
-    public cpuMove$ = this.CPUMoveFn$();
-    public playersBeastsMove$ = this.playersBeastsMoveFn$();
-    public cpuBeastsMove$ = this.CPUsBeastsMoveFn$();
+    public playerMoveStarted$ = this.playerMoveStartedFn$();
+    public cpuMoveStarted$ = this.CPUMoveStartedFn$();
+    public playersBeastsMoveStarted$ = this.playersBeastsMoveStartedFn$();
+    public cpuBeastsMoveStarted$ = this.CPUsBeastsMoveStartedFn$();
     public moveCompleted$ = this.moveCompletedFn$();
 
     constructor(
@@ -32,63 +34,63 @@ export class PartiesEffects {
     private startMoveFn$(): CreateEffectMetadata {
         return createEffect(() => this.actions$.pipe(
             ofType(playerJustHasStartedMove),
-            tap(() => console.log('PASSED TURN')),
-            map(() => playerMove()),
+            map(() => playerMoveStarted()),
         ));
     }
 
-    private playerMoveFn$(): CreateEffectMetadata {
+    private playerMoveStartedFn$(): CreateEffectMetadata {
         return createEffect(() => this.actions$.pipe(
-            ofType(playerMove),
+            ofType(playerMoveStarted),
             map((val) => {
                 this.attackService.initNewTurn();
                 this.attackService.playerIsMoving();
                 return val;
             }),
-            switchMap(() => this.actions$.pipe(ofType(packageOfUpdates))),
-            map(() => playerBeastsMove()),
+            switchMap(() => this.actions$.pipe(ofType(playerMoveCompleted))),
+            map(() => playerBeastsMoveStarted()),
         ));
     }
 
-    private playersBeastsMoveFn$(): CreateEffectMetadata {
+    private playersBeastsMoveStartedFn$(): CreateEffectMetadata {
         return createEffect(() => this.actions$.pipe(
-            ofType(playerBeastsMove),
+            ofType(playerBeastsMoveStarted),
             map((val) => {
                 this.attackService.playersBeastsAreMoving();
                 return val;
             }),
-            switchMap(() => this.actions$.pipe(ofType(packageOfUpdates))),
-            map(() => CPUMove()),
+            switchMap(() => this.actions$.pipe(ofType(playerBeastsMoveCompleted))),
+            map(() => CPUMoveStarted()),
         ));
     }
 
-    private CPUMoveFn$(): CreateEffectMetadata {
+    private CPUMoveStartedFn$(): CreateEffectMetadata {
         return createEffect(() => this.actions$.pipe(
-            ofType(CPUMove),
+            ofType(CPUMoveStarted),
             map((val) => {
                 this.attackService.CPUIsMoving();
                 return val;
             }),
-            switchMap(() => this.actions$.pipe(ofType(packageOfUpdates))),
-            map(() => CPUsBeastsMove()),
+            switchMap(() => this.actions$.pipe(ofType(CPUMoveCompleted))),
+            map(() => CPUsBeastsMoveStarted()),
         ));
     }
 
-    private CPUsBeastsMoveFn$(): CreateEffectMetadata {
+    private CPUsBeastsMoveStartedFn$(): CreateEffectMetadata {
         return createEffect(() => this.actions$.pipe(
-            ofType(CPUsBeastsMove),
+            ofType(CPUsBeastsMoveStarted),
             map((val) => {
                 this.attackService.CPUsBeastsAreMoving();
                 return val;
             }),
-            switchMap(() => this.actions$.pipe(ofType(packageOfUpdates))),
-            map(() => moveCompleted({ turn: this.attackService.getTurn() })),
+            switchMap(() => this.actions$.pipe(ofType(CPUsBeastsMoveCompleted))),
+            map(() => moveCompleted()),
         ));
     }
 
     private moveCompletedFn$(): CreateEffectMetadata {
         return createEffect(() => this.actions$.pipe(
             ofType(moveCompleted),
+            tap(() => this.attackService.saveTurn()),
         ), { dispatch: false });
     }
 }

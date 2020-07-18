@@ -43,6 +43,87 @@ function findBeastInState(state: IPartyState, beast: IBeast): IFoundBeast {
     return { beastOwner: 'cpuBeasts', beastIndex: cpuBeastIndex };
 }
 
+const saveChangesOfAllCharactersAndBeasts = (state: IPartyState, updates) => {
+    const {
+        addedBeasts,
+        updatedBeasts,
+        removedBeasts
+    } = updates;
+
+    console.log('updates', updates);
+
+    const unfrozenUpdates = { ...updates }; // deepUnfreeze(updates);
+
+    const playerCharacter = CharacterNormalizeService.deNormalize(updates, NORMALIZATION_MAP.PLAYER);
+    const cpuCharacter = CharacterNormalizeService.deNormalize(updates, NORMALIZATION_MAP.CPU);
+
+    delete unfrozenUpdates.addedBeasts;
+    delete unfrozenUpdates.updatedBeasts;
+    delete unfrozenUpdates.removedBeasts;
+
+    const characters = { ...unfrozenUpdates };
+
+    const newState = { ...deepUnfreeze(state), ...characters };
+
+    if (addedBeasts.length) {
+        for (const addingBeast of addedBeasts) {
+            const theBeastIsFromPlayersParty = addingBeast.party === playerCharacter.party;
+            let partyOfBeast = theBeastIsFromPlayersParty
+                ? newState.playerBeasts
+                : newState.cpuBeasts;
+            if (partyOfBeast.findIndex(beast => beast.id === addingBeast.id) > -1) {
+                continue;
+            }
+            partyOfBeast = [ ...partyOfBeast, addingBeast ];
+            if (theBeastIsFromPlayersParty) {
+                newState.playerBeasts = partyOfBeast;
+            } else {
+                newState.cpuBeasts = partyOfBeast;
+            }
+        }
+    }
+
+    if (updatedBeasts.length) {
+        for (const updatingBeast of updatedBeasts) {
+            const theBeastIsFromPlayersParty = updatingBeast.party === playerCharacter.party;
+            const partyOfBeast = theBeastIsFromPlayersParty
+                ? newState.playerBeasts
+                : newState.cpuBeasts;
+            const index = partyOfBeast.findIndex(beast => beast.id === updatingBeast.id);
+            if (index < 0) {
+                throw new Error('Обновляемое существо не найдено в стеке.');
+            }
+            partyOfBeast[index] = updatingBeast;
+            if (theBeastIsFromPlayersParty) {
+                newState.playerBeasts = partyOfBeast;
+            } else {
+                newState.cpuBeasts = partyOfBeast;
+            }
+        }
+    }
+
+    if (removedBeasts.length) {
+        for (const removingBeast of removedBeasts) {
+            const theBeastIsFromPlayersParty = removingBeast.party === playerCharacter.party;
+            const partyOfBeast = theBeastIsFromPlayersParty
+                ? newState.playerBeasts
+                : newState.cpuBeasts;
+            const index = partyOfBeast.findIndex(beast => beast.id === removingBeast.id);
+            if (index < 0) {
+                throw new Error('Удаляемое существо не найдено в стеке.');
+            }
+            partyOfBeast.splice(index, 1);
+            if (theBeastIsFromPlayersParty) {
+                newState.playerBeasts = partyOfBeast;
+            } else {
+                newState.cpuBeasts = partyOfBeast;
+            }
+        }
+    }
+
+    return newState;
+};
+
 const partiesReducer = createReducer(
     initialState,
     on(PartiesActions.updatePlayerCharacter, (state: IPartyState, { playerCharacter }) => {
@@ -82,97 +163,18 @@ const partiesReducer = createReducer(
             ...CharacterNormalizeService.normalizeCPU(newCPUCharacter),
         };
     }),
-    on(PartiesActions.packageOfUpdates, (state: IPartyState, updates) => {
-        const {
-            addedBeasts,
-            updatedBeasts,
-            removedBeasts
-        } = updates;
-
-        const unfrozenUpdates = deepUnfreeze(updates);
-
-        const playerCharacter = CharacterNormalizeService.deNormalize(updates, NORMALIZATION_MAP.PLAYER);
-        const cpuCharacter = CharacterNormalizeService.deNormalize(updates, NORMALIZATION_MAP.CPU);
-
-        delete unfrozenUpdates.addedBeasts;
-        delete unfrozenUpdates.updatedBeasts;
-        delete unfrozenUpdates.removedBeasts;
-
-        const characters = { ...unfrozenUpdates };
-
-        const newState = { ...deepUnfreeze(state), ...characters };
-
-        if (addedBeasts.length) {
-            for (const addingBeast of addedBeasts) {
-                const theBeastIsFromPlayersParty = addingBeast.party === playerCharacter.party;
-                let partyOfBeast = theBeastIsFromPlayersParty
-                    ? newState.playerBeasts
-                    : newState.cpuBeasts;
-                if (partyOfBeast.findIndex(beast => beast.id === addingBeast.id) > -1) {
-                    continue;
-                }
-                partyOfBeast = [ ...partyOfBeast, addingBeast ];
-                if (theBeastIsFromPlayersParty) {
-                    newState.playerBeasts = partyOfBeast;
-                } else {
-                    newState.cpuBeasts = partyOfBeast;
-                }
-            }
-        }
-
-        if (updatedBeasts.length) {
-            for (const updatingBeast of updatedBeasts) {
-                const theBeastIsFromPlayersParty = updatingBeast.party === playerCharacter.party;
-                const partyOfBeast = theBeastIsFromPlayersParty
-                    ? newState.playerBeasts
-                    : newState.cpuBeasts;
-                const index = partyOfBeast.findIndex(beast => beast.id === updatingBeast.id);
-                if (index < 0) {
-                    throw new Error('Обновляемое существо не найдено в стеке.');
-                }
-                partyOfBeast[index] = updatingBeast;
-                if (theBeastIsFromPlayersParty) {
-                    newState.playerBeasts = partyOfBeast;
-                } else {
-                    newState.cpuBeasts = partyOfBeast;
-                }
-            }
-        }
-
-        if (removedBeasts.length) {
-            for (const removingBeast of removedBeasts) {
-                const theBeastIsFromPlayersParty = removingBeast.party === playerCharacter.party;
-                const partyOfBeast = theBeastIsFromPlayersParty
-                    ? newState.playerBeasts
-                    : newState.cpuBeasts;
-                const index = partyOfBeast.findIndex(beast => beast.id === removingBeast.id);
-                if (index < 0) {
-                    throw new Error('Удаляемое существо не найдено в стеке.');
-                }
-                partyOfBeast.splice(index, 1);
-                if (theBeastIsFromPlayersParty) {
-                    newState.playerBeasts = partyOfBeast;
-                } else {
-                    newState.cpuBeasts = partyOfBeast;
-                }
-            }
-        }
-
-        return newState;
-    }),
-    on(PartiesActions.playerJustHasStartedMove, (state) => {
-        console.log('Player passed turn');
-        return {
-            ...state,
-            playerPassedTurn: true,
-        };
-    }),
-    on(PartiesActions.moveCompleted, (state) => {
-        return {
-            ...state,
-            playerPassedTurn: false,
-        };
-    }),
+    on(PartiesActions.playerMoveCompleted, saveChangesOfAllCharactersAndBeasts),
+    on(PartiesActions.playerBeastsMoveCompleted, saveChangesOfAllCharactersAndBeasts),
+    on(PartiesActions.CPUMoveCompleted, saveChangesOfAllCharactersAndBeasts),
+    on(PartiesActions.CPUsBeastsMoveCompleted, saveChangesOfAllCharactersAndBeasts),
+    on(PartiesActions.playerJustHasStartedMove, (state) => ({
+        ...state,
+        playerPassedTurn: true,
+    })),
+    on(PartiesActions.moveCompleted, (state) => ({
+        ...state,
+        playerPassedTurn: false,
+    })),
 );
 
 export function reducer(state: IPartyState, action: Action): IPartyState {

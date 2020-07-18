@@ -107,6 +107,7 @@ export class BattleComponent implements OnInit, OnDestroy {
             .valueChanges
             .pipe(
                 map(({ value }) => {
+                    console.log('value', value);
                     this.playerAttack = value;
                     this.attackService.setPlayerAttack(value);
                     return value;
