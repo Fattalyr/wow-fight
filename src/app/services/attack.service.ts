@@ -2,15 +2,8 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { select, Store } from '@ngrx/store';
 import deepUnfreeze from 'deep-unfreeze';
-import {
-    CraftedSpells,
-    IAvailableAttackVectors,
-    IPossibleAttack,
-    ISpell,
-    Party,
-    SPELLS,
-} from '../models';
-import { IActivity, ITurn, } from '../store/battle/battle.reducer';
+import { CraftedSpells, IAvailableAttackVectors, IPossibleAttack, ISpell, Party, SPELLS } from '../models';
+import { IActivity, ITurn } from '../store/battle/battle.reducer';
 import { createBeast, IBeast, ICharacter } from '../classes/characters';
 import { combineLatest } from 'rxjs';
 import {
@@ -18,19 +11,23 @@ import {
     selectCPUCharacter,
     selectPlayerBeasts,
     selectPlayerCharacter,
-} from '../store/parties/parties.selectors';
-import { map, tap, switchMap, } from 'rxjs/operators';
-import { CharacterNormalizeService } from '../store/parties/character-normalize.service';
+} from '../store/_parties/parties.selectors';
+import { map, switchMap } from 'rxjs/operators';
+import { UUID } from 'angular2-uuid';
+import { CharacterNormalizeService } from '../store/_parties/character-normalize.service';
 import { selectTurns } from '../store/battle/battle.selectors';
 import {
-    playerMoveCompleted,
-    playerBeastsMoveCompleted,
     CPUMoveCompleted,
     CPUsBeastsMoveCompleted,
-} from '../store/parties/parties.actions';
+    playerBeastsMoveCompleted,
+    playerMoveCompleted,
+} from '../store/_parties/parties.actions';
 import { ATTACK_METHOD } from '../constants/constants';
-import { IPartyUpdates } from '../store/parties/parties.models';
+import { IPartyUpdates } from '../store/_parties/parties.models';
 import { turnCompleted } from '../store/battle/battle.actions';
+import { ICastedSpell } from '../store/spells/spells.reducer';
+import { selectAllSpells } from '../store/spells/spells.selectors';
+import { addSpell, removeBatch, updateSpells } from '../store/spells/spells.actions';
 
 
 @Injectable({
@@ -46,6 +43,7 @@ export class AttackService {
     private cpuParty: Party = [];
     private turns: ITurn[] = [];
     private turn: ITurn;
+    private spells: ICastedSpell[] = [];
     public playersAvailableAttackVectors: IAvailableAttackVectors;
     public cpusAvailableAttackVectors: IAvailableAttackVectors;
     private turns$ = this.store.pipe(select(selectTurns));
@@ -62,13 +60,15 @@ export class AttackService {
         this.store.select(selectCPUCharacter),
         this.store.select(selectPlayerBeasts),
         this.store.select(selectCPUBeasts),
+        this.store.select(selectAllSpells)
     ])
         .pipe(
             map(([
                 playerCharacter,
                 cpuCharacter,
                 playersBeasts,
-                cpusBeasts
+                cpusBeasts,
+                spells
             ]) => {
                 this.playerCharacter = deepUnfreeze(playerCharacter);
                 this.cpuCharacter = deepUnfreeze(cpuCharacter);
@@ -78,14 +78,16 @@ export class AttackService {
                 this.cpuParty = [ this.cpuCharacter, ...this.cpusBeasts ];
                 this.allEntities = [ ...this.playerParty, ...this.cpuParty ];
                 this.playersAvailableAttackVectors = this.calculateAttackVectors(this.turns, this.playerCharacter, this.cpuParty);
+                this.spells = spells;
                 return {
                     playerCharacter: this.playerCharacter,
                     cpuCharacter: this.cpuCharacter,
                     playerParty: this.playerParty,
                     cpuParty: this.cpuParty,
+                    spells: this.spells,
                 };
             }),
-            switchMap(({ playerParty, cpuParty, playerCharacter, cpuCharacter }) => this.turns$
+            switchMap(({ playerParty, cpuParty, playerCharacter, cpuCharacter, spells }) => this.turns$
                 .pipe(
                     map(turns => {
                         this.roundNumber = turns.length + 1;
@@ -216,51 +218,96 @@ export class AttackService {
         return availableAttacks;
     }
 
-    public applyActivity({
-        assaulterId,
-        targetId,
-        method,
-        spell,
-        damage,
-        critFired,
-        calledBeasts
+    private applyHit({
+         targetId,
+         damage,
     }: IActivity): void {
         const all = this.allEntities;
-        const assaulter = all.find(entity => entity.id === assaulterId);
         const defending = all.find(entity => entity.id === targetId);
+        defending.currentData.hp -= damage;
+    }
 
-        if (method === ATTACK_METHOD.HIT) {
-            defending.currentData.hp -= damage;
-        } else if (method === ATTACK_METHOD.SPELL) {
-            assaulter.castedSpells[spell.spellName] = spell.coolDown;
-            defending.castedSpells[spell.spellName] = spell.duration;
+    private createSpell(activity: IActivity): ICastedSpell {
+        const {
+            duration,
+            coolDown,
+            canNotAttacks,
+            calledBeast
+        } = activity.spell;
+        const { calledBeasts } = activity;
 
-            if (spell.reduceHP) {
-                const diff = defending.currentData.hp - damage;
-                const resultIsHigherZero = diff >= 0;
-                defending.currentData.hp = resultIsHigherZero
-                    ? diff
-                    : 0;
-                if (!resultIsHigherZero) {
-                    defending.isAlive = false;
-                }
-            } else if (spell.addHP) {
-                const diff = defending.currentData.hp + damage;
-                const resultIsLowerMax = diff <= defending.inheritedData.hp;
-                defending.currentData.hp = resultIsLowerMax
-                    ? diff
-                    : defending.inheritedData.hp;
-            }
-
-            if (spell.calledBeast) {
-                for (const beast of calledBeasts) {
-                    if (beast.party === this.playerCharacter.party) {
-                        this.playersBeasts = [ ...this.playersBeasts, beast ];
-                    } else {
-                        this.cpusBeasts = [ ...this.cpusBeasts, beast ];
-                    }
+        if (calledBeast) {
+            for (const beast of calledBeasts) {
+                if (beast.party === this.playerCharacter.party) {
+                    this.playersBeasts = [ ...this.playersBeasts, beast ];
+                } else {
+                    this.cpusBeasts = [ ...this.cpusBeasts, beast ];
                 }
             }
+        }
+
+        return {
+            id: UUID.UUID(),
+            spellName: activity.spell.spellName,
+            initiator: activity.assaulterId,
+            target: activity.targetId,
+            duration,
+            coolDown,
+            canNotAttacks,
+            addHP: activity.spell?.addHP,
+            reduceHP: activity.spell?.reduceHP,
+            calledBeast: calledBeasts && calledBeasts.length ? calledBeasts[0].id : undefined,
+            HPDelta: activity.spell?.HPDelta,
+            roundNumber: this.roundNumber,
+        } as ICastedSpell;
+    }
+
+    private applySpell(spell: ICastedSpell): void {
+        const all = this.allEntities;
+        const defending = all.find(entity => entity.id === spell.target);
+
+        if (spell.reduceHP) {
+            const diff = defending.currentData.hp - spell.HPDelta;
+            const resultIsHigherZero = diff >= 0;
+            defending.currentData.hp = resultIsHigherZero
+                ? diff
+                : 0;
+            if (!resultIsHigherZero) {
+                defending.isAlive = false;
+            }
+        } else if (spell.addHP) {
+            const diff = defending.currentData.hp + spell.HPDelta;
+            const resultIsLowerMax = diff <= defending.inheritedData.hp;
+            defending.currentData.hp = resultIsLowerMax
+                ? diff
+                : defending.inheritedData.hp;
+        }
+    }
+
+    private applyPreviousSpellsOf(id: string): void {
+        const spells = this.spells.filter(spell => spell.initiator === id);
+        if (!spells) { return; }
+        const spellsForRemoving: string[] = [];
+        const spellsForUpdating: ICastedSpell[] = [];
+
+        for (const spell of spells) {
+            this.applySpell(spell);
+            if (spell.duration <= 0) {
+                spellsForRemoving.push(spell.id);
+            } else {
+                spellsForUpdating.push({
+                    ...spell,
+                    coolDown: spell.coolDown > 1 ? spell.coolDown - 1 : 0,
+                    duration: spell.duration - 1,
+                });
+            }
+        }
+
+        if (spellsForRemoving.length) {
+            this.store.dispatch(removeBatch({ spells: spellsForRemoving }));
+        }
+        if (spellsForUpdating.length) {
+            this.store.dispatch(updateSpells({ spells: spellsForUpdating }));
         }
     }
 
@@ -299,7 +346,16 @@ export class AttackService {
         const playerActivity = this.realizeAttack(this.playerCharacter, this.playerAttacks);
         this.turn.playerPartyActivities.push(playerActivity);
         console.log('playerActivity', playerActivity);
-        this.applyActivity(playerActivity);
+
+        this.applyPreviousSpellsOf(this.playerCharacter.id);
+
+        if (playerActivity.method === ATTACK_METHOD.HIT) {
+            this.applyHit(playerActivity);
+        } else if (playerActivity.method === ATTACK_METHOD.SPELL) {
+            const newSpell = this.createSpell(playerActivity);
+            this.applySpell(newSpell);
+            this.store.dispatch(addSpell({ spell: newSpell }));
+        }
 
         this.store.dispatch(playerMoveCompleted({
             ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
@@ -321,7 +377,16 @@ export class AttackService {
         const cpuActivity = this.realizeAttack(this.cpuCharacter, attack);
         this.turn.cpuPartyActivities.push(cpuActivity);
         console.log('cpuActivity', cpuActivity);
-        this.applyActivity(cpuActivity);
+
+        this.applyPreviousSpellsOf(this.cpuCharacter.id);
+
+        if (cpuActivity.method === ATTACK_METHOD.HIT) {
+            this.applyHit(cpuActivity);
+        } else if (cpuActivity.method === ATTACK_METHOD.SPELL) {
+            const newSpell = this.createSpell(cpuActivity);
+            this.applySpell(newSpell);
+            this.store.dispatch(addSpell({ spell: newSpell }));
+        }
 
         this.store.dispatch(CPUMoveCompleted({
             ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
@@ -344,7 +409,16 @@ export class AttackService {
             const playersBeastsAvailableAttackVectors = this.calculateAttackVectors(this.turns, playersBeast, this.cpuParty);
             const attack = this.defineCPUAttackVector(playersBeastsAvailableAttackVectors);
             const beastActivity = this.realizeAttack(playersBeast, attack);
-            this.applyActivity(beastActivity);
+            this.applyPreviousSpellsOf(playersBeast.id);
+
+            if (beastActivity.method === ATTACK_METHOD.HIT) {
+                this.applyHit(beastActivity);
+            } else if (beastActivity.method === ATTACK_METHOD.SPELL) {
+                const newSpell = this.createSpell(beastActivity);
+                this.applySpell(newSpell);
+                this.store.dispatch(addSpell({ spell: newSpell }));
+            }
+
             playerBeastActivities.push(beastActivity);
         }
 
@@ -371,7 +445,16 @@ export class AttackService {
             const cpusBeastsAvailableAttackVectors = this.calculateAttackVectors(this.turns, cpusBeast, this.cpuParty);
             const attack = this.defineCPUAttackVector(cpusBeastsAvailableAttackVectors);
             const beastActivity = this.realizeAttack(cpusBeast, attack);
-            this.applyActivity(beastActivity);
+            this.applyPreviousSpellsOf(cpusBeast.id);
+
+            if (beastActivity.method === ATTACK_METHOD.HIT) {
+                this.applyHit(beastActivity);
+            } else if (beastActivity.method === ATTACK_METHOD.SPELL) {
+                const newSpell = this.createSpell(beastActivity);
+                this.applySpell(newSpell);
+                this.store.dispatch(addSpell({ spell: newSpell }));
+            }
+
             cpuBeastActivities.push(beastActivity);
         }
 
@@ -391,6 +474,7 @@ export class AttackService {
     }
 
     public saveTurn(): void {
+        console.log('TURN', this.turn);
         this.store.dispatch(turnCompleted({ turn: this.turn }));
     }
 

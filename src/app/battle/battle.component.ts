@@ -11,7 +11,7 @@ import {
     selectPlayerCharacter,
     selectPlayerPartyId,
     selectSettings,
-} from '../store/parties/parties.selectors';
+} from '../store/_parties/parties.selectors';
 import { selectTotalTurns, selectTurns } from '../store/battle/battle.selectors';
 import {
     NAMES,
@@ -19,7 +19,8 @@ import {
     Party,
 } from '../models';
 import { AttackService } from '../services/attack.service';
-import { playerJustHasStartedMove } from '../store/parties/parties.actions';
+import { playerJustHasStartedMove } from '../store/_parties/parties.actions';
+import { selectSpells } from '../store/spells/spells.selectors';
 
 
 @Component({
@@ -67,6 +68,10 @@ export class BattleComponent implements OnInit, OnDestroy {
         select(selectTotalTurns)
     );
 
+    public spells$ = this.store.pipe(
+        select(selectSpells)
+    );
+
     public turnNumber: number;
 
     private destroy$ = new Subject<void>();
@@ -81,7 +86,7 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     constructor(
         private store: Store,
-        private attackService: AttackService,
+        public attackService: AttackService,
     ) { }
 
     ngOnInit(): void {

@@ -1,71 +1,22 @@
 import { createAction, props } from '@ngrx/store';
 import { IBeast, ICharacter } from '../../classes/characters';
-import { IPartyUpdates } from './parties.models';
 
-export const updatePlayerCharacter = createAction(
-    `[ PARTIES ] Update Player Character`,
-    props<{ playerCharacter: ICharacter }>()
+export const addCharacter = createAction(
+    `[ CHARACTERS ] Add One`,
+    props< { character: ICharacter | IBeast }>()
 );
 
-export const updateCPUCharacter = createAction(
-    `[ PARTIES ] Update CPU Character`,
-    props<{ cpuCharacter: ICharacter }>()
+export const updateCharacter = createAction(
+    `[ CHARACTERS ] Update One`,
+    props< { character: ICharacter | IBeast }>()
 );
 
-export const addBeast = createAction(
-    `[ PARTIES ] Add New Beast`,
-    props<{ beast: IBeast }>()
+export const updateCharacters = createAction(
+    `[ CHARACTERS ] Update Many`,
+    props< { characters: Array<ICharacter | IBeast> }>()
 );
 
-export const updateBeast = createAction(
-    `[ PARTIES ] Update Beast`,
-    props<{ beast: IBeast }>()
-);
-
-export const toggleCharacters = createAction(
-    `[ PARTIES ] Toggle Characters`
-);
-
-export const playerJustHasStartedMove = createAction(
-    `[ MOVE ] Player Just Has Started Move`,
-);
-
-export const playerMoveStarted = createAction(
-    `[ PLAYER MOVE ] Started`
-);
-
-export const playerMoveCompleted = createAction(
-    `[ PLAYER MOVE ] Completed`,
-    props<IPartyUpdates>()
-);
-
-export const playerBeastsMoveStarted = createAction(
-    `[ PLAYER\'S BEASTS MOVE ] Started`
-);
-
-export const playerBeastsMoveCompleted = createAction(
-    `[ PLAYER\'S BEASTS MOVE ] Completed`,
-    props<IPartyUpdates>()
-);
-
-export const CPUMoveStarted = createAction(
-    `[ CPU MOVE ] Started`
-);
-
-export const CPUMoveCompleted = createAction(
-    `[ CPU MOVE ] Completed`,
-    props<IPartyUpdates>()
-);
-
-export const CPUsBeastsMoveStarted = createAction(
-    `[ CPU\'s BEASTS MOVE ] Started`
-);
-
-export const CPUsBeastsMoveCompleted = createAction(
-    `[ CPU\'s BEASTS MOVE ] Completed`,
-    props<IPartyUpdates>()
-);
-
-export const moveCompleted = createAction(
-    `[ MOVE ] Move Completed`
+export const removeCharacter = createAction(
+    `[ CHARACTERS ] Remove One`,
+    props< { characterId: string }>()
 );

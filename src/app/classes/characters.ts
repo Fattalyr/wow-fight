@@ -1,10 +1,20 @@
 import { UUID } from 'angular2-uuid';
-import { BEASTS, CraftedSpells, IBeastsData, ICalculatedParams, ICharacterData, ISpell, NAMES } from '../models';
+import {
+    NAMES,
+    BEASTS,
+    STATUSES,
+    CraftedSpells,
+    IBeastsData,
+    ICalculatedParams,
+    ICharacterData,
+    ISpell,
+} from '../models';
 import { BEASTS_DATA, CHARACTERS_START_DATA, MULTIPLIERS } from '../constants/constants';
 
 
 export interface IEntity {
     self: BEASTS | NAMES;
+    status: STATUSES;
     id: string;
     party: string;
     inheritedData: IBeastsData | ICharacterData;
@@ -16,11 +26,13 @@ export interface IEntity {
 }
 
 export interface IBeast extends IEntity {
+    self: BEASTS;
     inheritedData: IBeastsData;
     currentData: IBeastsData;
 }
 
 export interface ICharacter extends IEntity {
+    self: NAMES;
     inheritedData: ICharacterData;
     currentData: ICharacterData;
 }
@@ -40,7 +52,7 @@ export function calculateBasicParams(characterData: ICharacterData): ICalculated
     return calculatedParams;
 }
 
-export function createBeast(name: BEASTS, party: string, id?: string): IBeast {
+export function createBeast(name: BEASTS, party: string, status: STATUSES, id?: string): IBeast {
     if (!id) {
         id = UUID.UUID();
     }
@@ -48,6 +60,7 @@ export function createBeast(name: BEASTS, party: string, id?: string): IBeast {
     const beastData = BEASTS_DATA[ name ];
     return {
         self: beastData.type,
+        status,
         inheritedData: { ...beastData, },
         currentData: { ...beastData, },
         isAlive: true,
@@ -59,7 +72,7 @@ export function createBeast(name: BEASTS, party: string, id?: string): IBeast {
     };
 }
 
-export function createCharacter(name: NAMES, party: string, id?: string): ICharacter {
+export function createCharacter(name: NAMES, party: string, status: STATUSES, id?: string): ICharacter {
     if (!id) {
         id = UUID.UUID();
     }
@@ -70,6 +83,7 @@ export function createCharacter(name: NAMES, party: string, id?: string): IChara
         : 'nerzhul';
     return {
         self: characterData.self,
+        status,
         inheritedData: { ...characterData, ...calculatedParams },
         currentData: { ...characterData, ...calculatedParams },
         isAlive: true,

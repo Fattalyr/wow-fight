@@ -10,6 +10,13 @@ export enum BEASTS {
     SKELETON = 'скелет',
 }
 
+export enum STATUSES {
+    PLAYER = 'player',
+    CPU = 'CPU',
+    PLAYERS_BEAST = 'player\'s beast',
+    CPUS_BEAST = 'CPU\'s beast',
+}
+
 export enum SPELLS {
     FEAR = 'страх',
     FILTH = 'скверна',
@@ -84,26 +91,7 @@ export interface IMultipliers {
     stamina: ICalculatedParams;
 }
 
-export interface IAttacks {
-    cpuAttackVector: IPossibleAttack;
-    playerAttackVector: IPossibleAttack;
-}
-
 export type Party = (ICharacter | IBeast)[];
-
-export interface ITUpdatedParties {
-    updatedPlayerCharacter: ICharacter;
-    updatedCpuCharacter: ICharacter;
-    updatedPlayerParty: Party;
-    updatedCpuParty: Party;
-}
-
-export enum Vector {
-    PLAYER_VS_CPU = 'player -> cpu',
-    CPU_VS_PLAYER = 'cpu -> player',
-    CPUS_BEAST_VS_PLAYERS_PARTY = 'cpu\'s beast -> player\'s party',
-    PLAYERS_BEAST_VS_CPUS_PARTY = 'player\'s beast -> cpu\'s party',
-}
 
 export interface IAttackResult {
     assaulter: ICharacter;
