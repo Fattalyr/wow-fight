@@ -58,4 +58,73 @@ export class CharacterNormalize {
             currentHp: beast.currentData.hp,
         };
     }
+
+    public static denormalize(character: INormalizedCharacter | INormalizedBeast): ICharacter | IBeast {
+        if ([ 'player', 'CPU' ].includes(character.status)) {
+            return this.denormalizeCharacter(character as INormalizedCharacter);
+        }
+        return this.denormalizeBeast(character as INormalizedBeast);
+    }
+
+    public static denormalizeCharacter(character: INormalizedCharacter): ICharacter {
+        return {
+            self: character.self,
+            id: character.id,
+            status: character.status,
+            party: character.party,
+            slug: character.slug,
+            isAlive: character.isAlive,
+
+            inheritedData: {
+                self: character.inheritedSelf,
+                strength: character.inheritedStrength,
+                agility: character.inheritedAgility,
+                intellect: character.inheritedIntellect,
+                stamina: character.inheritedStamina,
+                spells: character.inheritedSpells,
+                dps: character.inheritedDps,
+                hp: character.inheritedHp,
+                crit: character.inheritedCrit,
+            },
+
+            currentData: {
+                self: character.currentSelf,
+                strength: character.currentStrength,
+                agility: character.currentAgility,
+                intellect: character.currentIntellect,
+                stamina: character.currentStamina,
+                spells: character.currentSpells,
+                dps: character.currentDps,
+                hp: character.currentHp,
+                crit: character.currentCrit,
+            },
+        };
+    }
+
+    public static denormalizeBeast(beast: INormalizedBeast): IBeast {
+        return {
+            self: beast.self,
+            id: beast.id,
+            status: beast.status,
+            party: beast.party,
+            slug: beast.slug,
+            isAlive: beast.isAlive,
+
+            inheritedData: {
+                type: beast.inheritedType,
+                dps: beast.inheritedDps,
+                hp: beast.inheritedHp,
+            },
+
+            currentData: {
+                type: beast.currentType,
+                dps: beast.currentDps,
+                hp: beast.currentHp,
+            },
+        };
+    }
+
+    public static denormalizeBatch(batch: Array<INormalizedCharacter | INormalizedBeast>): Array<ICharacter | IBeast> {
+        return batch.map(beastOrCharacter => this.denormalize(beastOrCharacter));
+    }
 }

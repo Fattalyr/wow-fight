@@ -4,22 +4,17 @@ import { select, Store } from '@ngrx/store';
 import { Subject } from 'rxjs';
 import { map, tap, takeUntil, } from 'rxjs/operators';
 import {
-    selectCPUBeasts,
     selectCPUCharacter,
-    selectCPUPartyId,
-    selectPlayerBeasts,
     selectPlayerCharacter,
-    selectPlayerPartyId,
-    selectSettings,
-} from '../store/_parties/parties.selectors';
-import { selectTotalTurns, selectTurns } from '../store/battle/battle.selectors';
+} from '../store/parties/parties.selectors';
+import { selectTotalTurns } from '../store/battle/battle.selectors';
 import {
     NAMES,
     IPossibleAttack,
     Party,
 } from '../models';
 import { AttackService } from '../services/attack.service';
-import { playerJustHasStartedMove } from '../store/_parties/parties.actions';
+import { playerJustHasStartedMove } from '../store/parties/parties.actions';
 import { selectSpells } from '../store/spells/spells.selectors';
 
 
@@ -38,30 +33,6 @@ export class BattleComponent implements OnInit, OnDestroy {
 
     public cpuCharacter$ = this.store.pipe(
         select(selectCPUCharacter)
-    );
-
-    public playerPartyId$ = this.store.pipe(
-        select(selectPlayerPartyId)
-    );
-
-    public cpuPartyId$ = this.store.pipe(
-        select(selectCPUPartyId)
-    );
-
-    public playerBeasts$ = this.store.pipe(
-        select(selectPlayerBeasts)
-    );
-
-    public cpuBeasts$ = this.store.pipe(
-        select(selectCPUBeasts)
-    );
-
-    public fullState$ = this.store.pipe(
-        select(selectSettings)
-    );
-
-    public turns$ = this.store.pipe(
-        select(selectTurns)
     );
 
     public total$ = this.store.pipe(

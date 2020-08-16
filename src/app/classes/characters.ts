@@ -20,8 +20,6 @@ export interface IEntity {
     inheritedData: IBeastsData | ICharacterData;
     currentData: IBeastsData | ICharacterData;
     slug: string;
-    spellbound: CraftedSpells;
-    castedSpells: CraftedSpells;
     isAlive: boolean;
 }
 
@@ -67,8 +65,6 @@ export function createBeast(name: BEASTS, party: string, status: STATUSES, id?: 
         party,
         id,
         slug,
-        spellbound: [],
-        castedSpells: [],
     };
 }
 
@@ -90,8 +86,6 @@ export function createCharacter(name: NAMES, party: string, status: STATUSES, id
         party,
         id,
         slug,
-        spellbound: [],
-        castedSpells: [],
     };
 }
 

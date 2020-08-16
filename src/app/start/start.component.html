@@ -3,7 +3,7 @@
 
         <p class="centered">Выберите героя:</p>
         <div class="heroes-box">
-            <div class="heroes-box-inner">
+            <div *ngIf="playerCharacter$ | async" class="heroes-box-inner">
                 <div
                     class="hero-image nerzhul"
                     [class]="{ selected: (playerCharacter$ | async).self === names.NERZHUL }"

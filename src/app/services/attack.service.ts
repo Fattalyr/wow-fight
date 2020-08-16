@@ -2,32 +2,26 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { select, Store } from '@ngrx/store';
 import deepUnfreeze from 'deep-unfreeze';
-import { CraftedSpells, IAvailableAttackVectors, IPossibleAttack, ISpell, Party, SPELLS } from '../models';
+import { CraftedSpells, IAvailableAttackVectors, IPossibleAttack, ISpell, Party, SPELLS, STATUSES } from '../models';
 import { IActivity, ITurn } from '../store/battle/battle.reducer';
 import { createBeast, IBeast, ICharacter } from '../classes/characters';
-import { combineLatest } from 'rxjs';
-import {
-    selectCPUBeasts,
-    selectCPUCharacter,
-    selectPlayerBeasts,
-    selectPlayerCharacter,
-} from '../store/_parties/parties.selectors';
 import { map, switchMap } from 'rxjs/operators';
 import { UUID } from 'angular2-uuid';
-import { CharacterNormalizeService } from '../store/_parties/character-normalize.service';
 import { selectTurns } from '../store/battle/battle.selectors';
 import {
     CPUMoveCompleted,
     CPUsBeastsMoveCompleted,
     playerBeastsMoveCompleted,
     playerMoveCompleted,
-} from '../store/_parties/parties.actions';
+} from '../store/parties/parties.actions';
 import { ATTACK_METHOD } from '../constants/constants';
 import { IPartyUpdates } from '../store/_parties/parties.models';
 import { turnCompleted } from '../store/battle/battle.actions';
 import { ICastedSpell } from '../store/spells/spells.reducer';
-import { selectAllSpells } from '../store/spells/spells.selectors';
 import { addSpell, removeBatch, updateSpells } from '../store/spells/spells.actions';
+import { combineLatest } from 'rxjs';
+import { selectCharacters } from '../store/parties/parties.selectors';
+import { selectAllSpells, selectSpells } from '../store/spells/spells.selectors';
 
 
 @Injectable({
@@ -56,29 +50,20 @@ export class AttackService {
     ) {}
 
     public characterUpdatesFlow$ = combineLatest([
-        this.store.select(selectPlayerCharacter),
-        this.store.select(selectCPUCharacter),
-        this.store.select(selectPlayerBeasts),
-        this.store.select(selectCPUBeasts),
+        this.store.select(selectCharacters),
         this.store.select(selectAllSpells)
     ])
         .pipe(
-            map(([
-                playerCharacter,
-                cpuCharacter,
-                playersBeasts,
-                cpusBeasts,
-                spells
-            ]) => {
-                this.playerCharacter = deepUnfreeze(playerCharacter);
-                this.cpuCharacter = deepUnfreeze(cpuCharacter);
-                this.playersBeasts = deepUnfreeze(playersBeasts);
-                this.cpusBeasts = deepUnfreeze(cpusBeasts);
+            map(([ characters, spells ]) => {
+                this.playerCharacter = characters.find(character => character.status === STATUSES.PLAYER) as ICharacter;
+                this.cpuCharacter = characters.find(character => character.status === STATUSES.CPU) as ICharacter;
+                this.playersBeasts = characters.filter(beast => beast.status === STATUSES.PLAYERS_BEAST) as IBeast[];
+                this.cpusBeasts = characters.filter(beast => beast.status === STATUSES.CPUS_BEAST) as IBeast[];
                 this.playerParty = [ this.playerCharacter, ...this.playersBeasts ];
                 this.cpuParty = [ this.cpuCharacter, ...this.cpusBeasts ];
                 this.allEntities = [ ...this.playerParty, ...this.cpuParty ];
-                this.playersAvailableAttackVectors = this.calculateAttackVectors(this.turns, this.playerCharacter, this.cpuParty);
-                this.spells = spells;
+                // this.playersAvailableAttackVectors = this.calculateAttackVectors(this.turns, this.playerCharacter, this.cpuParty);
+                this.spells = [ ...spells ];
                 return {
                     playerCharacter: this.playerCharacter,
                     cpuCharacter: this.cpuCharacter,
@@ -92,7 +77,7 @@ export class AttackService {
                     map(turns => {
                         this.roundNumber = turns.length + 1;
                         this.turns = turns;
-                        this.cpusAvailableAttackVectors = this.calculateAttackVectors(turns, cpuCharacter, playerParty);
+                        // this.cpusAvailableAttackVectors = this.calculateAttackVectors(turns, cpuCharacter, playerParty);
                         return {
                             turns,
                             playerCharacter,
@@ -141,64 +126,65 @@ export class AttackService {
             critFired,
         };
 
-        if (method === ATTACK_METHOD.SPELL) {
-            resultActivity.spell = attack.spell;
-        }
-
-        if (method === ATTACK_METHOD.HIT) {
-            resultActivity.damage = character.currentData.dps * (critFired ? 1.5 : 1);
-        } else if (method === ATTACK_METHOD.SPELL && attack?.spell?.HPDelta) {
-            resultActivity.damage = attack.spell.HPDelta;
-        } else if (method === ATTACK_METHOD.SPELL && attack?.spell?.callBeast) {
-            resultActivity.calledBeasts = [ createBeast(attack.spell.calledBeast.type, character.party) ];
-        }
+        // if (method === ATTACK_METHOD.SPELL) {
+        //     resultActivity.spell = attack.spell;
+        // }
+        //
+        // if (method === ATTACK_METHOD.HIT) {
+        //     resultActivity.damage = character.currentData.dps * (critFired ? 1.5 : 1);
+        // } else if (method === ATTACK_METHOD.SPELL && attack?.spell?.HPDelta) {
+        //     resultActivity.damage = attack.spell.HPDelta;
+        // } else if (method === ATTACK_METHOD.SPELL && attack?.spell?.callBeast) {
+        //     const status = character.status === STATUSES.PLAYER ? STATUSES.PLAYERS_BEAST : STATUSES.CPUS_BEAST;
+        //     resultActivity.calledBeasts = [ createBeast(attack.spell.calledBeast.type, character.party, status) ];
+        // }
 
         return resultActivity;
     }
 
-    private calculateAttackVectors(
-        turns: ITurn[],
-        assaulter: ICharacter | IBeast,
-        availableEnemies: Party
-    ): IAvailableAttackVectors {
-        const len = turns.length;
-        const enemies: string[] = [];
-        const availableSpells = 'spells' in assaulter.inheritedData && assaulter.inheritedData.spells
-            ? [ ...assaulter.inheritedData.spells ]
-            : [];
-
-        for (const enemy of availableEnemies) {
-            enemies.push(enemy.id);
-        }
-
-        if (len === 0) {
-            return {
-                canHit: true,
-                spells: availableSpells,
-                availableEnemies: enemies,
-            };
-        }
-
-        const castedByCharacterSpells: CraftedSpells = this.reduceSpells(assaulter.castedSpells);
-        const castedSpellNames: string[] = Object.keys(castedByCharacterSpells);
-        let canSpell: ISpell[] = [];
-
-        if (castedSpellNames.length === 0) {
-            canSpell = availableSpells;
-        } else {
-            for (const spell in availableSpells) {
-                if (castedSpellNames[availableSpells[spell].spellName] === undefined) {
-                    canSpell.push(availableSpells[spell]);
-                }
-            }
-        }
-
-        return {
-            canHit: !Object.keys(assaulter.spellbound).includes(SPELLS.FEAR),
-            spells: [ ...canSpell ],
-            availableEnemies: enemies,
-        };
-    }
+    // private calculateAttackVectors(
+    //     turns: ITurn[],
+    //     assaulter: ICharacter | IBeast,
+    //     availableEnemies: Party
+    // ): IAvailableAttackVectors {
+    //     const len = turns.length;
+    //     const enemies: string[] = [];
+    //     const availableSpells = 'spells' in assaulter.inheritedData && assaulter.inheritedData.spells
+    //         ? [ ...assaulter.inheritedData.spells ]
+    //         : [];
+    //
+    //     for (const enemy of availableEnemies) {
+    //         enemies.push(enemy.id);
+    //     }
+    //
+    //     if (len === 0) {
+    //         return {
+    //             canHit: true,
+    //             spells: availableSpells,
+    //             availableEnemies: enemies,
+    //         };
+    //     }
+    //
+    //     const castedByCharacterSpells: CraftedSpells = this.reduceSpells(assaulter.castedSpells);
+    //     const castedSpellNames: string[] = Object.keys(castedByCharacterSpells);
+    //     let canSpell: ISpell[] = [];
+    //
+    //     if (castedSpellNames.length === 0) {
+    //         canSpell = availableSpells;
+    //     } else {
+    //         for (const spell in availableSpells) {
+    //             if (castedSpellNames[availableSpells[spell].spellName] === undefined) {
+    //                 canSpell.push(availableSpells[spell]);
+    //             }
+    //         }
+    //     }
+    //
+    //     return {
+    //         canHit: !Object.keys(assaulter.spellbound).includes(SPELLS.FEAR),
+    //         spells: [ ...canSpell ],
+    //         availableEnemies: enemies,
+    //     };
+    // }
 
     public calculatePossibleAttacks(availableVectors: IAvailableAttackVectors): IPossibleAttack[] {
         const availableAttacks: IPossibleAttack[] = [];
@@ -343,27 +329,27 @@ export class AttackService {
         console.log(' ');
         console.log('Player is moving');
 
-        const playerActivity = this.realizeAttack(this.playerCharacter, this.playerAttacks);
-        this.turn.playerPartyActivities.push(playerActivity);
-        console.log('playerActivity', playerActivity);
+        // const playerActivity = this.realizeAttack(this.playerCharacter, this.playerAttacks);
+        // this.turn.playerPartyActivities.push(playerActivity);
+        // console.log('playerActivity', playerActivity);
+        //
+        // this.applyPreviousSpellsOf(this.playerCharacter.id);
+        //
+        // if (playerActivity.method === ATTACK_METHOD.HIT) {
+        //     this.applyHit(playerActivity);
+        // } else if (playerActivity.method === ATTACK_METHOD.SPELL) {
+        //     const newSpell = this.createSpell(playerActivity);
+        //     this.applySpell(newSpell);
+        //     this.store.dispatch(addSpell({ spell: newSpell }));
+        // }
 
-        this.applyPreviousSpellsOf(this.playerCharacter.id);
-
-        if (playerActivity.method === ATTACK_METHOD.HIT) {
-            this.applyHit(playerActivity);
-        } else if (playerActivity.method === ATTACK_METHOD.SPELL) {
-            const newSpell = this.createSpell(playerActivity);
-            this.applySpell(newSpell);
-            this.store.dispatch(addSpell({ spell: newSpell }));
-        }
-
-        this.store.dispatch(playerMoveCompleted({
-            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
-            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
-            addedBeasts: playerActivity.calledBeasts || [],
-            updatedBeasts: [],
-            removedBeasts: [],
-        } as IPartyUpdates));
+        // this.store.dispatch(playerMoveCompleted({
+        //     ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+        //     ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+        //     addedBeasts: playerActivity.calledBeasts || [],
+        //     updatedBeasts: [],
+        //     removedBeasts: [],
+        // } as IPartyUpdates));
     }
 
     public CPUIsMoving(): void {
@@ -372,29 +358,29 @@ export class AttackService {
         console.log(' ');
         console.log('CPU is moving');
 
-        const attack = this.defineCPUAttackVector(this.cpusAvailableAttackVectors);
-        console.log('attack', attack);
-        const cpuActivity = this.realizeAttack(this.cpuCharacter, attack);
-        this.turn.cpuPartyActivities.push(cpuActivity);
-        console.log('cpuActivity', cpuActivity);
+        // const attack = this.defineCPUAttackVector(this.cpusAvailableAttackVectors);
+        // console.log('attack', attack);
+        // const cpuActivity = this.realizeAttack(this.cpuCharacter, attack);
+        // this.turn.cpuPartyActivities.push(cpuActivity);
+        // console.log('cpuActivity', cpuActivity);
+        //
+        // this.applyPreviousSpellsOf(this.cpuCharacter.id);
+        //
+        // if (cpuActivity.method === ATTACK_METHOD.HIT) {
+        //     this.applyHit(cpuActivity);
+        // } else if (cpuActivity.method === ATTACK_METHOD.SPELL) {
+        //     const newSpell = this.createSpell(cpuActivity);
+        //     this.applySpell(newSpell);
+        //     this.store.dispatch(addSpell({ spell: newSpell }));
+        // }
 
-        this.applyPreviousSpellsOf(this.cpuCharacter.id);
-
-        if (cpuActivity.method === ATTACK_METHOD.HIT) {
-            this.applyHit(cpuActivity);
-        } else if (cpuActivity.method === ATTACK_METHOD.SPELL) {
-            const newSpell = this.createSpell(cpuActivity);
-            this.applySpell(newSpell);
-            this.store.dispatch(addSpell({ spell: newSpell }));
-        }
-
-        this.store.dispatch(CPUMoveCompleted({
-            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
-            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
-            addedBeasts: cpuActivity.calledBeasts || [],
-            updatedBeasts: [],
-            removedBeasts: [],
-        } as IPartyUpdates));
+        // this.store.dispatch(CPUMoveCompleted({
+        //     ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+        //     ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+        //     addedBeasts: cpuActivity.calledBeasts || [],
+        //     updatedBeasts: [],
+        //     removedBeasts: [],
+        // } as IPartyUpdates));
     }
 
     public playersBeastsAreMoving(): void {
@@ -403,34 +389,34 @@ export class AttackService {
         console.log(' ');
         console.log('Player\'s beasts are moving');
 
-        const playerBeastActivities = [];
+        // const playerBeastActivities = [];
+        //
+        // for (const playersBeast of this.playersBeasts) {
+        //     const playersBeastsAvailableAttackVectors = this.calculateAttackVectors(this.turns, playersBeast, this.cpuParty);
+        //     const attack = this.defineCPUAttackVector(playersBeastsAvailableAttackVectors);
+        //     const beastActivity = this.realizeAttack(playersBeast, attack);
+        //     this.applyPreviousSpellsOf(playersBeast.id);
+        //
+        //     if (beastActivity.method === ATTACK_METHOD.HIT) {
+        //         this.applyHit(beastActivity);
+        //     } else if (beastActivity.method === ATTACK_METHOD.SPELL) {
+        //         const newSpell = this.createSpell(beastActivity);
+        //         this.applySpell(newSpell);
+        //         this.store.dispatch(addSpell({ spell: newSpell }));
+        //     }
+        //
+        //     playerBeastActivities.push(beastActivity);
+        // }
+        //
+        // this.turn.playerPartyActivities = [ ...this.turn.playerPartyActivities, ...playerBeastActivities ];
 
-        for (const playersBeast of this.playersBeasts) {
-            const playersBeastsAvailableAttackVectors = this.calculateAttackVectors(this.turns, playersBeast, this.cpuParty);
-            const attack = this.defineCPUAttackVector(playersBeastsAvailableAttackVectors);
-            const beastActivity = this.realizeAttack(playersBeast, attack);
-            this.applyPreviousSpellsOf(playersBeast.id);
-
-            if (beastActivity.method === ATTACK_METHOD.HIT) {
-                this.applyHit(beastActivity);
-            } else if (beastActivity.method === ATTACK_METHOD.SPELL) {
-                const newSpell = this.createSpell(beastActivity);
-                this.applySpell(newSpell);
-                this.store.dispatch(addSpell({ spell: newSpell }));
-            }
-
-            playerBeastActivities.push(beastActivity);
-        }
-
-        this.turn.playerPartyActivities = [ ...this.turn.playerPartyActivities, ...playerBeastActivities ];
-
-        this.store.dispatch(playerBeastsMoveCompleted({
-            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
-            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
-            addedBeasts: [],
-            updatedBeasts: [],
-            removedBeasts: [],
-        } as IPartyUpdates));
+        // this.store.dispatch(playerBeastsMoveCompleted({
+        //     ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+        //     ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+        //     addedBeasts: [],
+        //     updatedBeasts: [],
+        //     removedBeasts: [],
+        // } as IPartyUpdates));
     }
 
     public CPUsBeastsAreMoving(): void {
@@ -439,34 +425,34 @@ export class AttackService {
         console.log(' ');
         console.log('CPU\'s beasts are moving');
 
-        const cpuBeastActivities = [];
+        // const cpuBeastActivities = [];
+        //
+        // for (const cpusBeast of this.cpusBeasts) {
+        //     const cpusBeastsAvailableAttackVectors = this.calculateAttackVectors(this.turns, cpusBeast, this.cpuParty);
+        //     const attack = this.defineCPUAttackVector(cpusBeastsAvailableAttackVectors);
+        //     const beastActivity = this.realizeAttack(cpusBeast, attack);
+        //     this.applyPreviousSpellsOf(cpusBeast.id);
+        //
+        //     if (beastActivity.method === ATTACK_METHOD.HIT) {
+        //         this.applyHit(beastActivity);
+        //     } else if (beastActivity.method === ATTACK_METHOD.SPELL) {
+        //         const newSpell = this.createSpell(beastActivity);
+        //         this.applySpell(newSpell);
+        //         this.store.dispatch(addSpell({ spell: newSpell }));
+        //     }
+        //
+        //     cpuBeastActivities.push(beastActivity);
+        // }
+        //
+        // this.turn.playerPartyActivities = [ ...this.turn.playerPartyActivities, ...cpuBeastActivities ];
 
-        for (const cpusBeast of this.cpusBeasts) {
-            const cpusBeastsAvailableAttackVectors = this.calculateAttackVectors(this.turns, cpusBeast, this.cpuParty);
-            const attack = this.defineCPUAttackVector(cpusBeastsAvailableAttackVectors);
-            const beastActivity = this.realizeAttack(cpusBeast, attack);
-            this.applyPreviousSpellsOf(cpusBeast.id);
-
-            if (beastActivity.method === ATTACK_METHOD.HIT) {
-                this.applyHit(beastActivity);
-            } else if (beastActivity.method === ATTACK_METHOD.SPELL) {
-                const newSpell = this.createSpell(beastActivity);
-                this.applySpell(newSpell);
-                this.store.dispatch(addSpell({ spell: newSpell }));
-            }
-
-            cpuBeastActivities.push(beastActivity);
-        }
-
-        this.turn.playerPartyActivities = [ ...this.turn.playerPartyActivities, ...cpuBeastActivities ];
-
-        this.store.dispatch(CPUsBeastsMoveCompleted({
-            ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
-            ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
-            addedBeasts: [],
-            updatedBeasts: [],
-            removedBeasts: [],
-        } as IPartyUpdates));
+        // this.store.dispatch(CPUsBeastsMoveCompleted({
+        //     ...CharacterNormalizeService.normalizePlayer(this.playerCharacter),
+        //     ...CharacterNormalizeService.normalizeCPU(this.cpuCharacter),
+        //     addedBeasts: [],
+        //     updatedBeasts: [],
+        //     removedBeasts: [],
+        // } as IPartyUpdates));
     }
 
     public getTurn(): ITurn {

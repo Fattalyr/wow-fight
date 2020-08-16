@@ -3,16 +3,10 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { select, Store } from '@ngrx/store';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import {
-    selectSettings,
-    selectPlayerCharacter,
-    selectCPUCharacter,
-    selectPlayerPartyId,
-    selectCPUPartyId,
-} from '../store/_parties/parties.selectors';
-import { toggleCharacters } from '../store/_parties/parties.actions';
+import { takeUntil, tap } from 'rxjs/operators';
 import { NAMES } from '../models';
+import { selectPlayerCharacter } from '../store/parties/parties.selectors';
+import { toggleCharacters } from '../store/parties/parties.actions';
 
 
 @Component({
@@ -32,22 +26,6 @@ export class StartComponent implements OnInit, OnDestroy {
         select(selectPlayerCharacter)
     );
 
-    public cpuCharacter$ = this.store.pipe(
-        select(selectCPUCharacter)
-    );
-
-    public playerPartyId$ = this.store.pipe(
-        select(selectPlayerPartyId)
-    );
-
-    public cpuPartyId$ = this.store.pipe(
-        select(selectCPUPartyId)
-    );
-
-    public fullState$ = this.store.pipe(
-        select(selectSettings)
-    );
-
     public playerCharacterName: NAMES;
 
     private destroy$ = new Subject<void>();
@@ -60,6 +38,7 @@ export class StartComponent implements OnInit, OnDestroy {
     ngOnInit(): void {
         this.playerCharacter$
             .pipe(
+                tap(char => console.log('player', char)),
                 takeUntil(this.destroy$),
             )
             .subscribe();
