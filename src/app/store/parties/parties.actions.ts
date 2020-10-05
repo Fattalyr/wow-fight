@@ -1,6 +1,5 @@
 import { createAction, props } from '@ngrx/store';
 import { IBeast, ICharacter } from '../../classes/characters';
-import { IPartyUpdates } from '../_parties/parties.models';
 
 export const addCharacter = createAction(
     `[ PARTIES ] Add One`,
@@ -35,8 +34,7 @@ export const playerMoveStarted = createAction(
 );
 
 export const playerMoveCompleted = createAction(
-    `[ PLAYER MOVE ] Completed`,
-    props<IPartyUpdates>()
+    `[ PLAYER MOVE ] Completed`
 );
 
 export const playerBeastsMoveStarted = createAction(
@@ -44,8 +42,7 @@ export const playerBeastsMoveStarted = createAction(
 );
 
 export const playerBeastsMoveCompleted = createAction(
-    `[ PLAYER\'S BEASTS MOVE ] Completed`,
-    props<IPartyUpdates>()
+    `[ PLAYER\'S BEASTS MOVE ] Completed`
 );
 
 export const CPUMoveStarted = createAction(
@@ -53,8 +50,7 @@ export const CPUMoveStarted = createAction(
 );
 
 export const CPUMoveCompleted = createAction(
-    `[ CPU MOVE ] Completed`,
-    props<IPartyUpdates>()
+    `[ CPU MOVE ] Completed`
 );
 
 export const CPUsBeastsMoveStarted = createAction(
@@ -62,8 +58,7 @@ export const CPUsBeastsMoveStarted = createAction(
 );
 
 export const CPUsBeastsMoveCompleted = createAction(
-    `[ CPU\'s BEASTS MOVE ] Completed`,
-    props<IPartyUpdates>()
+    `[ CPU\'s BEASTS MOVE ] Completed`
 );
 
 export const moveCompleted = createAction(

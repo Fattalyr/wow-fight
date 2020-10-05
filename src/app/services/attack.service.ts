@@ -15,7 +15,6 @@ import {
     playerMoveCompleted,
 } from '../store/parties/parties.actions';
 import { ATTACK_METHOD } from '../constants/constants';
-import { IPartyUpdates } from '../store/_parties/parties.models';
 import { turnCompleted } from '../store/battle/battle.actions';
 import { ICastedSpell } from '../store/spells/spells.reducer';
 import { addSpell, removeBatch, updateSpells } from '../store/spells/spells.actions';

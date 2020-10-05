@@ -61,12 +61,12 @@ export class BattleComponent implements OnInit, OnDestroy {
     ) { }
 
     ngOnInit(): void {
-        this.attackService
-            .characterUpdatesFlow$
-            .pipe(
-                takeUntil(this.destroy$),
-            )
-            .subscribe();
+        // this.attackService
+        //     .characterUpdatesFlow$
+        //     .pipe(
+        //         takeUntil(this.destroy$),
+        //     )
+        //     .subscribe();
 
         this.total$
             .pipe(
